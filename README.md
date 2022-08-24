@@ -1,5 +1,5 @@
 # ICM42670P Arduino library
-This arduino library for the Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU.
+This arduino library for the TDK/Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU.
 The ICM-42670-P is a high performance 6-axis MEMS MotionTracking device that combines a 3-axis gyroscope and a 3-axis accelerometer. It has a configurable host interface that supports I3C<sup>SM</sup>, I2C, and SPI serial communication, features up to 2.25 Kbytes FIFO and 2 programmable interrupts with ultra-low-power wake-on-motion support to minimize system power consumption.
 This library supports both I2C and SPI commmunication with the ICM42670P.
 

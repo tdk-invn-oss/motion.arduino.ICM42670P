@@ -5,13 +5,11 @@ ICM42670P IMU(SPI,8);
 
 uint8_t irq_received = 0;
 
-void irq_handler(void)
-{
+void irq_handler(void) {
   irq_received = 1;
 }
 
-void event_cb(inv_imu_sensor_event_t *evt)
-{
+void event_cb(inv_imu_sensor_event_t *evt) {
   // Format data for Serial Plotter
   Serial.print(evt->accel[0]);
   Serial.print(",");
@@ -52,8 +50,7 @@ void setup() {
 
 void loop() {
   // Wait for interrupt to read data from fifo
-  if(irq_received)
-  {
+  if(irq_received) {
       irq_received = 0;
       IMU.getDataFromFifo(event_cb);
   }
