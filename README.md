@@ -118,11 +118,28 @@ Serial.print("Temperature = ");
 Serial.println(imu_event.temperature);
 ```
 
-**int enableFifoInterrupt(uint8_t intpin, sensor_event_cb event_cb);**
+**int enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark)**
 
-This method initializes the fifo and the interrupt of the ICM42670P. the interrupt is triggered each time there is a sample in the fifo, and the provided handler is called.
+This method initializes the fifo and the interrupt of the ICM42670P. The interrupt is triggered each time there is enough samples in the fifo (as specified by fifo_watermark), and the provided handler is called.
 Any interuptable pin of the Arduino can be used for intpin.
-Raw data can be translated to International System using the configured FSR for each sensor. Temperature in Degrees Centigrade = (TEMP_DATA / 2) + 25;.
+
+```C++
+uint8_t irq_received = 0;
+
+void irq_handler(void)
+{
+  irq_received = 1;
+}
+...
+
+// Enable interrupt on pin 2
+IMU.enableFifoInterrupt(2,irq_handler);
+```
+
+**int getDataFromFifo(ICM42670P_sensor_event_cb event_cb)**
+
+This method reads the ICM42670P sensor data samples stored in the FIFO and call the provided event handler with the sample event as parameter.
+Raw data can be translated to International System using the configured FSR for each sensor. Temperature in Degrees Centigrade = (TEMP_DATA / 128) + 25
 
 ```C++
 void event_cb(inv_imu_sensor_event_t *evt)
@@ -142,8 +159,14 @@ void event_cb(inv_imu_sensor_event_t *evt)
   Serial.println(evt->temperature);
 }
 
-  // Enable interrupt on pin 2
-  IMU.enableFifoInterrupt(2,event_cb);
+void loop() {
+  // Wait for interrupt to read data from fifo
+  if(irq_received)
+  {
+      irq_received = 0;
+      IMU.getDataFromFifo(event_cb);
+  }
+}
 ```
 
 **inv_imu_sensor_event_t**

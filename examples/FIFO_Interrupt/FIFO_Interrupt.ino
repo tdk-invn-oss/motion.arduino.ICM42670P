@@ -3,6 +3,12 @@
 // Instantiate an ICM42670P with SPI interface and CS on pin 8
 ICM42670P IMU(SPI,8);
 
+uint8_t irq_received = 0;
+
+void irq_handler(void)
+{
+  irq_received = 1;
+}
 
 void event_cb(inv_imu_sensor_event_t *evt)
 {
@@ -34,8 +40,8 @@ void setup() {
     Serial.println(ret);
     while(1);
   }
-  // Enable interrupt on pin 2, Fifo watermark=1
-  IMU.enableFifoInterrupt(2,event_cb);
+  // Enable interrupt on pin 2, Fifo watermark=10
+  IMU.enableFifoInterrupt(2,irq_handler,10);
   // Accel ODR = 100 Hz and Full Scale Range = 16G
   IMU.startAccel(100,16);
   // Gyro ODR = 100 Hz and Full Scale Range = 2000 dps
@@ -45,5 +51,10 @@ void setup() {
 }
 
 void loop() {
- // Do nothing
+  // Wait for interrupt to read data from fifo
+  if(irq_received)
+  {
+      irq_received = 0;
+      IMU.getDataFromFifo(event_cb);
+  }
 }
