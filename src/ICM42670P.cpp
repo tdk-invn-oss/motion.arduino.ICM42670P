@@ -31,7 +31,6 @@ static int i2c_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer
 static int spi_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen);
 static int spi_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
 static void event_cb(inv_imu_sensor_event_t *event);
-static void getDataFromFifo(void);
 
 // i2c and SPI interfaces are used from C driver callbacks, without any knowledge of the object
 // As they are declared as static, they will be overriden each time a new ICM42670P object is created
@@ -45,7 +44,7 @@ static SPIClass *spi = NULL;
 static uint8_t chip_select_id = 0;
 bool _useSPI = false;
 #define SPI_READ 0x80
-#define SPI_CLOCK 8000000
+#define SPI_CLOCK 16000000
 
 // This is used by the event callback (not object aware), declared static
 static inv_imu_sensor_event_t* event;
@@ -88,14 +87,13 @@ int ICM42670P::begin() {
     }
     /* Initialize serial interface between MCU and Icm43xxx */
     icm_serif.context   = 0;        /* no need */
-    icm_serif.max_read  = 1024; /* maximum number of bytes allowed per serial read */
-    icm_serif.max_write = 1024; /* maximum number of bytes allowed per serial write */
+    icm_serif.max_read  = 2048; /* maximum number of bytes allowed per serial read */
+    icm_serif.max_write = 2048; /* maximum number of bytes allowed per serial write */
     rc = inv_imu_init(&icm_driver, &icm_serif, NULL);
     if (rc != INV_ERROR_SUCCESS) {
         return rc;
     }
     icm_driver.sensor_event_cb = event_cb;
-	icm_driver_ptr = &icm_driver;
   
     /* Check WHOAMI */
     rc = inv_imu_get_who_am_i(&icm_driver, &who_am_i);
@@ -141,18 +139,38 @@ int ICM42670P::getDataFromRegisters(inv_imu_sensor_event_t* evt)
     }
 }
 
-int ICM42670P::enableFifoInterrupt(uint8_t intpin, sensor_event_cb event_cb)
+int ICM42670P::enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark)
 {
-    if(event_cb != NULL)
+    int rc = 0;
+    uint8_t data;
+
+    if(handler == NULL)
     {
-        // Set callback when reading event from fifo
-		icm_driver.sensor_event_cb = event_cb;
-	} else {
-		return -1;
-	}
-	pinMode(intpin,INPUT);
-	attachInterrupt(intpin,getDataFromFifo,RISING);
-	return inv_imu_configure_fifo(&icm_driver,INV_IMU_FIFO_ENABLED);
+        return -1;
+    }
+    pinMode(intpin,INPUT);
+    attachInterrupt(intpin,handler,RISING);
+    rc |= inv_imu_configure_fifo(&icm_driver,INV_IMU_FIFO_ENABLED);
+    rc |= inv_imu_write_reg(&icm_driver, FIFO_CONFIG2, 1, &fifo_watermark);
+    // Set fifo_wm_int_w generating condition : fifo_wm_int_w generated when counter == threshold
+    rc |= inv_imu_read_reg(&icm_driver, FIFO_CONFIG5_MREG1, 1, &data);
+    data &= (uint8_t)~FIFO_CONFIG5_WM_GT_TH_EN;
+    rc |= inv_imu_write_reg(&icm_driver, FIFO_CONFIG5_MREG1, 1, &data);
+    // Disable APEX to use 2.25kB of fifo for raw data
+    data = SENSOR_CONFIG3_APEX_DISABLE_MASK;
+    rc |= inv_imu_write_reg(&icm_driver, SENSOR_CONFIG3_MREG1, 1, &data);
+
+    return rc;
+}
+
+int ICM42670P::getDataFromFifo(ICM42670P_sensor_event_cb event_cb)
+{
+    if(event_cb == NULL)
+    {
+        return -1;
+    }
+    icm_driver.sensor_event_cb = event_cb;
+    return inv_imu_get_data_from_fifo(&icm_driver);
 }
 
 static int i2c_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
@@ -198,9 +216,7 @@ static int spi_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer
     spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
     digitalWrite(chip_select_id,LOW);
     spi->transfer(reg | SPI_READ);
-    for(uint8_t i = 0; i < rlen; i++) {
-      rbuffer[i] = spi->transfer(0x00);
-    }
+    spi->transfer(rbuffer,rlen);
     digitalWrite(chip_select_id,HIGH);
     spi->endTransaction();
     return 0;
@@ -280,10 +296,3 @@ static void event_cb(inv_imu_sensor_event_t *evt)
     memcpy(event,evt,sizeof(inv_imu_sensor_event_t));
 }
 
-static void getDataFromFifo(void)
-{
-	if(icm_driver_ptr)
-	{
-		inv_imu_get_data_from_fifo(icm_driver_ptr);
-	}
-}
