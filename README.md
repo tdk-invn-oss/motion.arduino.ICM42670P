@@ -1,5 +1,7 @@
+![TDKInvensense](doc/pictures/TDKInvensense.jpg)
+
 # ICM42670P Arduino library
-This arduino library for the TDK/Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU.
+This arduino library for the [TDK/Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42670-p).
 The ICM-42670-P is a high performance 6-axis MEMS MotionTracking device that combines a 3-axis gyroscope and a 3-axis accelerometer. It has a configurable host interface that supports I3C<sup>SM</sup>, I2C, and SPI serial communication, features up to 2.25 Kbytes FIFO and 2 programmable interrupts with ultra-low-power wake-on-motion support to minimize system power consumption.
 This library supports both I2C and SPI commmunication with the ICM42670P.
 
@@ -39,6 +41,13 @@ Note: SPI Chip Select can be mapped on any free digital IO, updating the sketche
 | DIG.2        | CN4.1        |
 
 Note: Interrupt pin can be mapped on any free interruptable IO, updating the sketches accordingly
+
+## Orientation of axes
+
+The diagram below shows the orientation of the axes of sensitivity and the polarity of rotation. Note the pin 1 identifier (•) in the
+figure.
+
+![Orientation of Axes](doc/pictures/OrientationOfAxes.jpg)
 
 # Library API
 
@@ -91,7 +100,7 @@ Supported ODR are: 12, 25, 50, 100, 200, 400, 800, 1600 Hz (any other value defa
 Supported full scale ranges are: 250, 500, 1000, 2000 dps (any other value defaults to 2000 dps).
 
 ```C++
-IMU.startGyro(100,16);
+IMU.startGyro(100,2000);
 ```
 
 **int getDataFromRegisters(inv_imu_sensor_event_t&ast; evt)**
@@ -196,3 +205,10 @@ This sketch initializes the ICM42670P with the SPI interface, and starts logging
 **FIFO_Interrupt**
 
 This sketch initializes the ICM42670P with the SPI interface and interrupt PIN2, and starts logging raw sensor data from IMU FIFO. Sensor data can be monitored on Serial monitor or Serial plotter
+
+**IMU data monitoring**
+
+When the ICM42670P IMU is logging, the Accelerometer, Gyroscope and Temperature raw data can be monitored with the Arduino Serial Plotter (Tools->Serial Plotter).
+
+![Serial Plotter](doc/pictures/SerialPlotter.jpg)
+
