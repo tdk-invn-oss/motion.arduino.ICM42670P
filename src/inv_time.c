@@ -30,9 +30,6 @@ void inv_imu_sleep_us(uint32_t us)
     delayMicroseconds(us);
 }
 
-/*
- * Icm43xxx driver needs to get time in us. Let's give its implementation here.
- */
 uint64_t inv_imu_get_time_us(void)
 {
     return (uint64_t)micros();

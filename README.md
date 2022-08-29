@@ -10,8 +10,8 @@ Use Arduino Library manager to find and install the ICM42670P library.
 
 # Hardware setup
 There is currenlty no Arduino shield for the ICM42670P.
-The wiring must be done manually between an Arduino Zero and the ICM42670P daughter board.
-The wiring depends on the interface to be used:
+The wiring must be done manually between the Arduino motherboard and the ICM42670P daughter board.
+The below wiring description is given for an Arduino Zero board, it depends on the interface to be used:
 * I2C
 
 |Arduino Zero|ICM42670P daughter board|
@@ -75,7 +75,7 @@ Call the begin method to execute the ICM42670P initialization routine.
 
 **int begin()**
 
-Initializes all the required parameter in order to communicate and use the ICM42670P.
+Initializes all the required parameters in order to communicate and use the ICM42670P.
 
 ```C++
 IMU.begin();
