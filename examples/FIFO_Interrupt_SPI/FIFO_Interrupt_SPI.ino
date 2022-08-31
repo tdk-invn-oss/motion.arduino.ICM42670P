@@ -11,19 +11,21 @@ void irq_handler(void) {
 
 void event_cb(inv_imu_sensor_event_t *evt) {
   // Format data for Serial Plotter
-  Serial.print(evt->accel[0]);
-  Serial.print(",");
-  Serial.print(evt->accel[1]);
-  Serial.print(",");
-  Serial.print(evt->accel[2]);
-  Serial.print(",");
-  Serial.print(evt->gyro[0]);
-  Serial.print(",");
-  Serial.print(evt->gyro[1]);
-  Serial.print(",");
-  Serial.print(evt->gyro[2]);
-  Serial.print(",");
-  Serial.println(evt->temperature);
+  if(IMU.isAccelDataValid(evt)&&IMU.isGyroDataValid(evt)) {
+    Serial.print(evt->accel[0]);
+    Serial.print(",");
+    Serial.print(evt->accel[1]);
+    Serial.print(",");
+    Serial.print(evt->accel[2]);
+    Serial.print(",");
+    Serial.print(evt->gyro[0]);
+    Serial.print(",");
+    Serial.print(evt->gyro[1]);
+    Serial.print(",");
+    Serial.print(evt->gyro[2]);
+    Serial.print(",");
+    Serial.println(evt->temperature);
+  }
 }
 
 void setup() {

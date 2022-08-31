@@ -162,6 +162,14 @@ int ICM42670P::getDataFromFifo(ICM42670P_sensor_event_cb event_cb) {
   return inv_imu_get_data_from_fifo(&icm_driver);
 }
 
+bool ICM42670P::isAccelDataValid(inv_imu_sensor_event_t *evt) {
+  return (evt->sensor_mask & (1<<INV_SENSOR_ACCEL));
+}
+
+bool ICM42670P::isGyroDataValid(inv_imu_sensor_event_t *evt) {
+  return (evt->sensor_mask & (1<<INV_SENSOR_GYRO));
+}
+
 static int i2c_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
   i2c->beginTransmission(i2c_address);
   i2c->write(reg);

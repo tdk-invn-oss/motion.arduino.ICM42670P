@@ -19,6 +19,8 @@ void setup() {
   IMU.startAccel(100,16);
   // Gyro ODR = 100 Hz and Full Scale Range = 2000 dps
   IMU.startGyro(100,2000);
+  // Wait IMU to start
+  delay(100);
   // Plotter axis header
   Serial.println("AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,Temperature");
 }
