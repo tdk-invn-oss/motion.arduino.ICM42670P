@@ -178,6 +178,34 @@ void loop() {
 }
 ```
 
+**bool isAccelDataValid(inv_imu_sensor_event_t *evt)**
+
+This method checks if the accelerometer data in the FIFO sample is valid.
+
+```C++
+void event_cb(inv_imu_sensor_event_t *evt)
+{
+  if(IMU.isAccelDataValid(evt)) {
+    ...
+  }
+}
+
+```
+
+**bool isGyroDataValid(inv_imu_sensor_event_t *evt)**
+
+This method checks if the gyroscope data in the FIFO sample is valid.
+
+```C++
+void event_cb(inv_imu_sensor_event_t *evt)
+{
+  if(IMU.isGyroDataValid(evt)) {
+    ...
+  }
+}
+
+```
+
 **inv_imu_sensor_event_t**
 
 This structure is used by the ICM42670P driver to return raw sensor data. Available data is:

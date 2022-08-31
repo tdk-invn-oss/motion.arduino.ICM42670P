@@ -50,6 +50,8 @@ class ICM42670P {
     int getDataFromRegisters(inv_imu_sensor_event_t* evt);
     int enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark);
     int getDataFromFifo(ICM42670P_sensor_event_cb event_cb);
+    bool isAccelDataValid(inv_imu_sensor_event_t *evt);
+    bool isGyroDataValid(inv_imu_sensor_event_t *evt);
 
   protected:
     struct inv_imu_device icm_driver;
