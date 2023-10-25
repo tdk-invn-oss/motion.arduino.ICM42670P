@@ -10,8 +10,11 @@ Use Arduino Library manager to find and install the ICM42670P library.
 
 # Hardware setup
 There is currenlty no Arduino shield for the ICM42670P.
-The wiring must be done manually between the Arduino motherboard and the ICM42670P daughter board.
-The below wiring description is given for an Arduino Zero board, it depends on the interface to be used:
+The wiring must be done manually between the Arduino motherboard and the ICM42670P daughter board or the ICM42670P eval board.
+The below wiring descriptions are given for an Arduino Zero board, it depends on the interface to be used: I2C or SPI.
+
+## Arduino Zero connection with  ICM42670P Daugnter board
+
 * I2C
 
 |Arduino Zero|ICM42670P daughter board|
@@ -41,6 +44,39 @@ Note: SPI Chip Select can be mapped on any free digital IO, updating the sketche
 | DIG.2        | CN4.1        |
 
 Note: Interrupt pin can be mapped on any free interruptable IO, updating the sketches accordingly
+
+## Arduino Zero connection with  ICM42670P Eval board
+
+* I2C
+
+|Arduino Zero|ICM42670P eval board|
+| --- | --- |
+| 5V         | CN1.19         |
+| GND        | CN1.11         |
+| SDA        | CN1.18         |
+| SCL        | CN1.16         |
+
+* SPI
+
+|Arduino Zero|ICM42670P eval board|
+| --- | --- |
+| 5V         | CN1.19         |
+| GND        | CN1.11         |
+| MISO=SPI.1 | CN1.18         |
+| MOSI=SPI.4 | CN1.20         |
+| SCK=SPI.3  | CN1.16         |
+| CS=DIG.8   | CN1.4          |
+
+Note: SPI Chip Select can be mapped on any free digital IO, updating the sketches accordingly
+
+* Interrupt
+
+|Arduino Zero|ICM42670P eval board|
+| --- | --- |
+| DIG.2        | CN1.3        |
+
+Note: Interrupt pin can be mapped on any free interruptable IO, updating the sketches accordingly
+
 
 ## Orientation of axes
 
@@ -111,19 +147,19 @@ Raw data can be translated to International System using the configured FSR for 
 ```C++
 inv_imu_sensor_event_t event;
 IMU.getDataFromRegisters(&event);
-Serial.print("Accel X = ");
+Serial.print("AccelX:");
 Serial.println(imu_event.accel[0]);
-Serial.print("Accel Y = ");
-Serial.print(imu_event.accel[1]);
-Serial.print("Accel Z = ");
-Serial.print(imu_event.accel[2]);
-Serial.print("Gyro X = ");
-Serial.print(imu_event.gyro[0]);
-Serial.print("Gyro Y = ");
-Serial.print(imu_event.gyro[1]);
-Serial.print("Gyro Z = ");
-Serial.print(imu_event.gyro[2]);
-Serial.print("Temperature = ");
+Serial.print("AccelY:");
+Serial.println(imu_event.accel[1]);
+Serial.print("AccelZ:");
+Serial.println(imu_event.accel[2]);
+Serial.print("GyroX:");
+Serial.println(imu_event.gyro[0]);
+Serial.print("GyroY:");
+Serial.println(imu_event.gyro[1]);
+Serial.print("GyroZ:");
+Serial.println(imu_event.gyro[2]);
+Serial.print("Temperature:");
 Serial.println(imu_event.temperature);
 ```
 
@@ -153,18 +189,19 @@ Raw data can be translated to International System using the configured FSR for 
 ```C++
 void event_cb(inv_imu_sensor_event_t *evt)
 {
-  Serial.print(evt->accel[0]);
-  Serial.print(",");
-  Serial.print(evt->accel[1]);
-  Serial.print(",");
-  Serial.print(evt->accel[2]);
-  Serial.print(",");
-  Serial.print(evt->gyro[0]);
-  Serial.print(",");
-  Serial.print(evt->gyro[1]);
-  Serial.print(",");
-  Serial.print(evt->gyro[2]);
-  Serial.print(",");
+  Serial.print("AccelX:");
+  Serial.println(evt->accel[0]);
+  Serial.print("AccelY:");
+  Serial.println(evt->accel[1]);
+  Serial.print("AccelZ:");
+  Serial.println(evt->accel[2]);
+  Serial.print("GyroX:");
+  Serial.println(evt->gyro[0]);
+  Serial.print("GyroY:");
+  Serial.println(evt->gyro[1]);
+  Serial.print("GyroZ:");
+  Serial.println(evt->gyro[2]);
+  Serial.print("Temperature:");
   Serial.println(evt->temperature);
 }
 

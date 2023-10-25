@@ -23,12 +23,15 @@
 
 #include "imu/inv_imu_extfunc.h"
 #include "imu/inv_imu_transport.h"
-#include "imu/inv_imu_regmap.h"
 
 #include "Invn/InvError.h"
 
+#include <stddef.h> /* NULL */
+
+#define TIMEOUT_US 1000000 /* 1 sec */
+
 /* Function definition */
-static uint8_t *get_register_cache_addr(struct inv_imu_device *s, uint32_t reg);
+static uint8_t *get_register_cache_addr(struct inv_imu_device *s, const uint32_t reg);
 static int      write_sreg(struct inv_imu_device *s, uint8_t reg, uint32_t len, const uint8_t *buf);
 static int      read_sreg(struct inv_imu_device *s, uint8_t reg, uint32_t len, uint8_t *buf);
 static int      write_mclk_reg(struct inv_imu_device *s, uint16_t regaddr, uint8_t wr_cnt,
@@ -40,8 +43,13 @@ int inv_imu_init_transport(struct inv_imu_device *s)
 	int                       status = 0;
 	struct inv_imu_transport *t      = (struct inv_imu_transport *)s;
 
+	if (t == NULL)
+		return INV_ERROR_BAD_ARG;
+
 	status |= read_sreg(s, (uint8_t)PWR_MGMT0, 1, &(t->register_cache.pwr_mgmt0_reg));
+#if ICM_IS_GYRO_SUPPORTED
 	status |= read_sreg(s, (uint8_t)GYRO_CONFIG0, 1, &(t->register_cache.gyro_config0_reg));
+#endif
 	status |= read_sreg(s, (uint8_t)ACCEL_CONFIG0, 1, &(t->register_cache.accel_config0_reg));
 
 	status |=
@@ -54,11 +62,13 @@ int inv_imu_init_transport(struct inv_imu_device *s)
 
 int inv_imu_read_reg(struct inv_imu_device *s, uint32_t reg, uint32_t len, uint8_t *buf)
 {
-	uint32_t i;
-	int      rc = 0;
+	int rc = 0;
 
-	for (i = 0; i < len; i++) {
-		uint8_t *cache_addr = get_register_cache_addr(s, reg + i);
+	if (s == NULL)
+		return INV_ERROR_BAD_ARG;
+
+	for (uint32_t i = 0; i < len; i++) {
+		const uint8_t *cache_addr = get_register_cache_addr(s, reg + i);
 
 		if (cache_addr) {
 			buf[i] = *cache_addr;
@@ -66,7 +76,7 @@ int inv_imu_read_reg(struct inv_imu_device *s, uint32_t reg, uint32_t len, uint8
 			if (!(reg & 0x10000)) {
 				rc |= read_mclk_reg(s, ((reg + i) & 0xFFFF), 1, &buf[i]);
 			} else {
-				rc |= read_sreg(s, (uint8_t)reg + i, len - i, &buf[i]);
+				rc |= read_sreg(s, (uint8_t)(reg + i), len - i, &buf[i]);
 				break;
 			}
 		}
@@ -77,10 +87,12 @@ int inv_imu_read_reg(struct inv_imu_device *s, uint32_t reg, uint32_t len, uint8
 
 int inv_imu_write_reg(struct inv_imu_device *s, uint32_t reg, uint32_t len, const uint8_t *buf)
 {
-	uint32_t i;
-	int      rc = 0;
+	int rc = 0;
 
-	for (i = 0; i < len; i++) {
+	if (s == NULL)
+		return INV_ERROR_BAD_ARG;
+
+	for (uint32_t i = 0; i < len; i++) {
 		uint8_t *cache_addr = get_register_cache_addr(s, reg + i);
 
 		if (cache_addr)
@@ -101,12 +113,14 @@ int inv_imu_switch_on_mclk(struct inv_imu_device *s)
 	int                       status = 0;
 	uint8_t                   data;
 	struct inv_imu_transport *t = (struct inv_imu_transport *)s;
-	uint64_t timeout_us = 1000000; /* 1 sec */
-	uint64_t start;
-	uint64_t current;
+
+	if (t == NULL)
+		return INV_ERROR_BAD_ARG;
 
 	/* set IDLE bit only if it is not set yet */
 	if (t->need_mclk_cnt == 0) {
+		uint64_t start;
+
 		status |= inv_imu_read_reg(s, PWR_MGMT0, 1, &data);
 		data |= PWR_MGMT0_IDLE_MASK;
 		status |= inv_imu_write_reg(s, PWR_MGMT0, 1, &data);
@@ -118,13 +132,12 @@ int inv_imu_switch_on_mclk(struct inv_imu_device *s)
 		start = inv_imu_get_time_us();
 		do {
 			status = inv_imu_read_reg(s, MCLK_RDY, 1, &data);
-			
+
 			if (status)
 				return status;
 
 			/* Timeout */
-			current = inv_imu_get_time_us();
-			if (current - start > timeout_us)
+			if (inv_imu_get_time_us() - start > TIMEOUT_US)
 				return INV_ERROR_TIMEOUT;
 
 		} while (!(data & MCLK_RDY_MCLK_RDY_MASK));
@@ -147,6 +160,9 @@ int inv_imu_switch_off_mclk(struct inv_imu_device *s)
 	uint8_t                   data;
 	struct inv_imu_transport *t = (struct inv_imu_transport *)s;
 
+	if (t == NULL)
+		return INV_ERROR_BAD_ARG;
+
 	/* Reset the IDLE but only if there is one requester left */
 	if (t->need_mclk_cnt == 1) {
 		status |= inv_imu_read_reg(s, PWR_MGMT0, 1, &data);
@@ -167,15 +183,20 @@ int inv_imu_switch_off_mclk(struct inv_imu_device *s)
 
 /* Static function */
 
-static uint8_t *get_register_cache_addr(struct inv_imu_device *s, uint32_t reg)
+static uint8_t *get_register_cache_addr(struct inv_imu_device *s, const uint32_t reg)
 {
 	struct inv_imu_transport *t = (struct inv_imu_transport *)s;
+
+	if (t == NULL)
+		return (uint8_t *)0; /* error */
 
 	switch (reg) {
 	case PWR_MGMT0:
 		return &(t->register_cache.pwr_mgmt0_reg);
+#if ICM_IS_GYRO_SUPPORTED
 	case GYRO_CONFIG0:
 		return &(t->register_cache.gyro_config0_reg);
+#endif
 	case ACCEL_CONFIG0:
 		return &(t->register_cache.accel_config0_reg);
 	case TMST_CONFIG1_MREG1:
@@ -189,6 +210,9 @@ static int read_sreg(struct inv_imu_device *s, uint8_t reg, uint32_t len, uint8_
 {
 	struct inv_imu_serif *serif = (struct inv_imu_serif *)s;
 
+	if (serif == NULL)
+		return INV_ERROR_BAD_ARG;
+
 	if (len > serif->max_read)
 		return INV_ERROR_SIZE;
 
@@ -201,6 +225,9 @@ static int read_sreg(struct inv_imu_device *s, uint8_t reg, uint32_t len, uint8_
 static int write_sreg(struct inv_imu_device *s, uint8_t reg, uint32_t len, const uint8_t *buf)
 {
 	struct inv_imu_serif *serif = (struct inv_imu_serif *)s;
+
+	if (serif == NULL)
+		return INV_ERROR_BAD_ARG;
 
 	if (len > serif->max_write)
 		return INV_ERROR_SIZE;
@@ -216,6 +243,9 @@ static int read_mclk_reg(struct inv_imu_device *s, uint16_t regaddr, uint8_t rd_
 	uint8_t data;
 	uint8_t blk_sel = (regaddr & 0xFF00) >> 8;
 	int     status  = 0;
+
+	if (s == NULL)
+		return INV_ERROR_BAD_ARG;
 
 	// Have IMU not in IDLE mode to access MCLK domain
 	status |= inv_imu_switch_on_mclk(s);
@@ -247,6 +277,9 @@ static int write_mclk_reg(struct inv_imu_device *s, uint16_t regaddr, uint8_t wr
 	uint8_t data;
 	uint8_t blk_sel = (regaddr & 0xFF00) >> 8;
 	int     status  = 0;
+
+	if (s == NULL)
+		return INV_ERROR_BAD_ARG;
 
 	// Have IMU not in IDLE mode to access MCLK domain
 	status |= inv_imu_switch_on_mclk(s);

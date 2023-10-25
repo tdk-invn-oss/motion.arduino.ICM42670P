@@ -1,6 +1,6 @@
 /*
  * ________________________________________________________________________________________________________
- * Copyright (c) 2019 InvenSense Inc. All rights reserved.
+ * Copyright (c) 2015-2015 InvenSense Inc. All rights reserved.
  *
  * This software, related documentation and any modifications thereto (collectively “Software”) is subject
  * to InvenSense and its licensors' intellectual property rights under U.S. and international copyright
@@ -21,17 +21,19 @@
  * ________________________________________________________________________________________________________
  */
 
-#ifndef _INV_IMU_VERSION_H_
-#define _INV_IMU_VERSION_H_
+#ifndef _INV_IDD_EXPORT_H_
+#define _INV_IDD_EXPORT_H_
 
-#ifdef __cplusplus
-extern "C" {
+#if defined(_WIN32)
+	#if !defined(INV_EXPORT) && defined(INV_DO_DLL_EXPORT)
+		#define INV_EXPORT __declspec(dllexport)
+	#elif !defined(INV_EXPORT) && defined(INV_DO_DLL_IMPORT)
+		#define INV_EXPORT __declspec(dllimport)
+	#endif
 #endif
 
-#define INV_IMU_VERSION_STRING "2.2.6"
-
-#ifdef __cplusplus
-}
+#if !defined(INV_EXPORT)
+	#define INV_EXPORT
 #endif
 
-#endif /* _INV_IMU_VERSION_H_ */
+#endif /* _INV_IDD_EXPORT_H_ */

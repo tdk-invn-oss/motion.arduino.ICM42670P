@@ -45,33 +45,33 @@ extern "C" {
 
 /** Max FSR values for accel */
 #define ACCEL_CONFIG0_FS_SEL_MAX ACCEL_CONFIG0_FS_SEL_16g
-
-/** Max FSR values for gyro */
-#define GYRO_CONFIG0_FS_SEL_MAX GYRO_CONFIG0_FS_SEL_2000dps
-
 /** Max user offset value for accel (mg) */
 #define ACCEL_OFFUSER_MAX_MG 1000
+/** Accel start-up time */
+#define ACC_STARTUP_TIME_US 10000
 
+#if ICM_IS_GYRO_SUPPORTED
+/** Max FSR values for gyro */
+#define GYRO_CONFIG0_FS_SEL_MAX GYRO_CONFIG0_FS_SEL_2000dps
 /** Max user offset value for gyro (dps) */
 #define GYRO_OFFUSER_MAX_DPS 64
+/** Gyro start-up time */
+#define GYR_STARTUP_TIME_US 70000
+#endif
 
 /** Max buffer size mirrored from FIFO at polling time */
 #define FIFO_MIRRORING_SIZE 16 * 258 // packet size * max_count = 4kB
 
-/** Accel start-up time */
-#define ACC_STARTUP_TIME_US 10000
-
-/** Gyro start-up time */
-#define GYR_STARTUP_TIME_US 70000
-
-/** Gyro power-off to power-on duration */
-#define GYR_POWER_OFF_DUR_US 20000
-
 /** Sensor identifier for UI control function */
 enum inv_imu_sensor {
 	INV_SENSOR_ACCEL, /**< Accelerometer */
+#if ICM_IS_GYRO_SUPPORTED
 	INV_SENSOR_GYRO, /**< Gyroscope */
 	INV_SENSOR_FSYNC_EVENT, /**< FSYNC */
+#else
+	INV_SENSOR_RESERVED1,
+	INV_SENSOR_RESERVED2,
+#endif
 	INV_SENSOR_TEMPERATURE, /**< Chip temperature */
 	INV_SENSOR_DMP_PEDOMETER_EVENT, /**< Pedometer: step detected */
 	INV_SENSOR_DMP_PEDOMETER_COUNT, /**< Pedometer: step counter */
@@ -93,10 +93,14 @@ typedef struct {
 	int      sensor_mask;
 	uint16_t timestamp_fsync;
 	int16_t  accel[3];
-	int16_t  gyro[3];
-	int16_t  temperature;
-	int8_t   accel_high_res[3];
-	int8_t   gyro_high_res[3];
+#if ICM_IS_GYRO_SUPPORTED
+	int16_t gyro[3];
+#endif
+	int16_t temperature;
+	int8_t  accel_high_res[3];
+#if ICM_IS_GYRO_SUPPORTED
+	int8_t gyro_high_res[3];
+#endif
 } inv_imu_sensor_event_t;
 
 /** IMU driver states definition */
@@ -113,22 +117,19 @@ struct inv_imu_device {
 	 */
 	void (*sensor_event_cb)(inv_imu_sensor_event_t *event);
 
-	
-	uint8_t fifo_data[FIFO_MIRRORING_SIZE]; /**< FIFO mirroring memory area */
-	uint8_t dmp_is_on; /**< DMP started status */
-	uint8_t endianness_data; /**< Data endianness configuration */
-	uint8_t fifo_highres_enabled; /**< Highres mode configuration */
+	uint8_t               fifo_data[FIFO_MIRRORING_SIZE]; /**< FIFO mirroring memory area */
+	uint8_t               dmp_is_on; /**< DMP started status */
+	uint8_t               endianness_data; /**< Data endianness configuration */
+	uint8_t               fifo_highres_enabled; /**< Highres mode configuration */
 	INV_IMU_FIFO_CONFIG_t fifo_is_used; /**< FIFO configuration */
-    uint64_t gyro_start_time_us; /**< Gyro start time used to discard first samples */
-	uint64_t accel_start_time_us; /**< Accel start time used to discard first samples */
-	uint64_t gyro_power_off_tmst; /**< Gyro power off time */
+#if ICM_IS_GYRO_SUPPORTED
+	uint64_t gyro_start_time_us; /**< Gyro start time to discard first samples */
+#endif
+	uint64_t accel_start_time_us; /**< Accel start time to discard first samples */
 };
 
 /** Interrupt enum state for INT1, INT2, and IBI */
-typedef enum {
-	INV_IMU_DISABLE = 0, 
-	INV_IMU_ENABLE 
-} inv_imu_interrupt_value;
+typedef enum { INV_IMU_DISABLE = 0, INV_IMU_ENABLE } inv_imu_interrupt_value;
 
 /** Interrupt definition */
 typedef struct {
@@ -153,7 +154,7 @@ typedef struct {
  *  @param[in] sensor_event_cb  Callback executed when a new sensor event is available. *
  *  @return                     0 on success, negative value on error.
  */
-int inv_imu_init(struct inv_imu_device *s, struct inv_imu_serif *serif,
+int inv_imu_init(struct inv_imu_device *s, const struct inv_imu_serif *serif,
                  void (*sensor_event_cb)(inv_imu_sensor_event_t *event));
 
 /** @brief Reset device by reloading OTPs.
@@ -187,6 +188,42 @@ int inv_imu_enable_accel_low_noise_mode(struct inv_imu_device *s);
  */
 int inv_imu_disable_accel(struct inv_imu_device *s);
 
+/** @brief Configure accel Output Data Rate.
+ *  @param[in] s          Pointer to device.
+ *  @param[in] frequency  The requested frequency.
+ *  @return               0 on success, negative value on error.
+ */
+int inv_imu_set_accel_frequency(struct inv_imu_device *s, const ACCEL_CONFIG0_ODR_t frequency);
+
+/** @brief Set accel Low-Power averaging value.
+ *  @param[in] s        Pointer to device.
+ *  @param[in] acc_avg  Requested averaging value.
+ *  @return             0 on success, negative value on error.
+ */
+int inv_imu_set_accel_lp_avg(struct inv_imu_device *s, ACCEL_CONFIG1_ACCEL_FILT_AVG_t acc_avg);
+
+/** @brief Set accel Low-Noise bandwidth value.
+ *  @param[in] s       Pointer to device.
+ *  @param[in] acc_bw  Requested averaging value.
+ *  @return            0 on success, negative value on error.
+ */
+int inv_imu_set_accel_ln_bw(struct inv_imu_device *s, ACCEL_CONFIG1_ACCEL_FILT_BW_t acc_bw);
+
+/** @brief Set accel full scale range.
+ *  @param[in] s            Pointer to device.
+ *  @param[in] accel_fsr_g  Requested full scale range.
+ *  @return                 0 on success, negative value on error.
+ */
+int inv_imu_set_accel_fsr(struct inv_imu_device *s, ACCEL_CONFIG0_FS_SEL_t accel_fsr_g);
+
+/** @brief Access accel full scale range.
+ *  @param[in] s             Pointer to device.
+ *  @param[out] accel_fsr_g  Current full scale range.
+ *  @return 0 on success, negative value on error.
+ */
+int inv_imu_get_accel_fsr(struct inv_imu_device *s, ACCEL_CONFIG0_FS_SEL_t *accel_fsr_g);
+
+#if ICM_IS_GYRO_SUPPORTED
 /** @brief Enable/put gyro in low noise mode.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
@@ -198,6 +235,34 @@ int inv_imu_enable_gyro_low_noise_mode(struct inv_imu_device *s);
  *  @return       0 on success, negative value on error.
  */
 int inv_imu_disable_gyro(struct inv_imu_device *s);
+
+/** @brief Configure gyro Output Data Rate.
+ *  @param[in] s          Pointer to device.
+ *  @param[in] frequency  The requested frequency.
+ *  @return               0 on success, negative value on error.
+ */
+int inv_imu_set_gyro_frequency(struct inv_imu_device *s, const GYRO_CONFIG0_ODR_t frequency);
+
+/** @brief Set gyro Low-Noise bandwidth value.
+ *  @param[in] s       Pointer to device.
+ *  @param[in] gyr_bw  Requested averaging value.
+ *  @return            0 on success, negative value on error.
+ */
+int inv_imu_set_gyro_ln_bw(struct inv_imu_device *s, GYRO_CONFIG1_GYRO_FILT_BW_t gyr_bw);
+
+/** @brief Set gyro full scale range.
+ *  @param[in] s             Pointer to device.
+ *  @param[in] gyro_fsr_dps  Requested full scale range.
+*   @return                  0 on success, negative value on error.
+ */
+int inv_imu_set_gyro_fsr(struct inv_imu_device *s, GYRO_CONFIG0_FS_SEL_t gyro_fsr_dps);
+
+/** @brief Access gyro full scale range.
+ *  @param[in] s              Pointer to device.
+ *  @param[out] gyro_fsr_dps  Current full scale range.
+ *  @return                   0 on success, negative value on error.
+ */
+int inv_imu_get_gyro_fsr(struct inv_imu_device *s, GYRO_CONFIG0_FS_SEL_t *gyro_fsr_dps);
 
 /** @brief Enable fsync tagging functionality.
  *         * Enables fsync.
@@ -220,38 +285,35 @@ int inv_imu_enable_fsync(struct inv_imu_device *s);
  *  @return       0 on success, negative value on error.
  */
 int inv_imu_disable_fsync(struct inv_imu_device *s);
+#endif
 
 /** @brief Configure which interrupt source can trigger INT1.
- *  @param[in] s                       Pointer to device.
- *  @param[in] interrupt_to_configure  Structure with the corresponding state to manage INT1.
- *  @return                            0 on success, negative value on error.
+ *  @param[in] s   Pointer to device.
+ *  @param[in] it  Structure with the corresponding state to manage INT1.
+ *  @return        0 on success, negative value on error.
  */
-int inv_imu_set_config_int1(struct inv_imu_device *        s,
-                            inv_imu_interrupt_parameter_t *interrupt_to_configure);
+int inv_imu_set_config_int1(struct inv_imu_device *s, const inv_imu_interrupt_parameter_t *it);
 
 /** @brief Retrieve interrupts configuration.
- *  @param[in] s                       Pointer to device.
- *  @param[in] interrupt_to_configure  Structure with the corresponding state to manage INT1.
- *  @return                            0 on success, negative value on error.
+ *  @param[in] s    Pointer to device.
+ *  @param[out] it  Structure with the corresponding state to manage INT1.
+ *  @return         0 on success, negative value on error.
  */
-int inv_imu_get_config_int1(struct inv_imu_device *        s,
-                            inv_imu_interrupt_parameter_t *interrupt_to_configure);
+int inv_imu_get_config_int1(struct inv_imu_device *s, inv_imu_interrupt_parameter_t *it);
 
 /** @brief  Configure which interrupt source can trigger INT2.
- *  @param[in] s                       Pointer to device.
- *  @param[in] interrupt_to_configure  Structure with the corresponding state to INT2.
- *  @return                            0 on success, negative value on error.
+ *  @param[in] s   Pointer to device.
+ *  @param[in] it  Structure with the corresponding state to INT2.
+ *  @return        0 on success, negative value on error.
  */
-int inv_imu_set_config_int2(struct inv_imu_device *        s,
-                            inv_imu_interrupt_parameter_t *interrupt_to_configure);
+int inv_imu_set_config_int2(struct inv_imu_device *s, const inv_imu_interrupt_parameter_t *it);
 
 /** @brief  Retrieve interrupts configuration.
- *  @param[in] s                       Pointer to device.
- *  @param[in] interrupt_to_configure  Structure with the corresponding state to manage INT2.
- *  @return                            0 on success, negative value on error.
+ *  @param[in] s    Pointer to device.
+ *  @param[out] it  Structure with the corresponding state to manage INT2.
+ *  @return         0 on success, negative value on error.
  */
-int inv_imu_get_config_int2(struct inv_imu_device *        s,
-                            inv_imu_interrupt_parameter_t *interrupt_to_configure);
+int inv_imu_get_config_int2(struct inv_imu_device *s, inv_imu_interrupt_parameter_t *it);
 
 /** @brief Read all registers containing data (temperature, accelerometer and gyroscope). 
  *         Then it calls sensor_event_cb function passed at init for each packet.
@@ -274,69 +336,6 @@ int inv_imu_get_data_from_fifo(struct inv_imu_device *s);
  *  @return    The corresponding period expressed in us.
  */
 uint32_t inv_imu_convert_odr_bitfield_to_us(uint32_t odr_bitfield);
-
-/** @brief Configure accel Output Data Rate.
- *  @param[in] s          Pointer to device.
- *  @param[in] frequency  The requested frequency.
- *  @return               0 on success, negative value on error.
- */
-int inv_imu_set_accel_frequency(struct inv_imu_device *s, const ACCEL_CONFIG0_ODR_t frequency);
-
-/** @brief Configure gyro Output Data Rate.
- *  @param[in] s          Pointer to device.
- *  @param[in] frequency  The requested frequency.
- *  @return               0 on success, negative value on error.
- */
-int inv_imu_set_gyro_frequency(struct inv_imu_device *s, const GYRO_CONFIG0_ODR_t frequency);
-
-/** @brief Set accel full scale range.
- *  @param[in] s            Pointer to device.
- *  @param[in] accel_fsr_g  Requested full scale range.
- *  @return                 0 on success, negative value on error.
- */
-int inv_imu_set_accel_fsr(struct inv_imu_device *s, ACCEL_CONFIG0_FS_SEL_t accel_fsr_g);
-
-/** @brief Access accel full scale range.
- *  @param[in] s             Pointer to device.
- *  @param[out] accel_fsr_g  Current full scale range.
- *  @return 0 on success, negative value on error.
- */
-int inv_imu_get_accel_fsr(struct inv_imu_device *s, ACCEL_CONFIG0_FS_SEL_t *accel_fsr_g);
-
-/** @brief Set gyro full scale range.
- *  @param[in] s             Pointer to device.
- *  @param[in] gyro_fsr_dps  Requested full scale range.
-*   @return                  0 on success, negative value on error.
- */
-int inv_imu_set_gyro_fsr(struct inv_imu_device *s, GYRO_CONFIG0_FS_SEL_t gyro_fsr_dps);
-
-/** @brief Access gyro full scale range.
- *  @param[in] s              Pointer to device.
- *  @param[out] gyro_fsr_dps  Current full scale range.
- *  @return                   0 on success, negative value on error.
- */
-int inv_imu_get_gyro_fsr(struct inv_imu_device *s, GYRO_CONFIG0_FS_SEL_t *gyro_fsr_dps);
-
-/** @brief Set accel Low-Power averaging value.
- *  @param[in] s        Pointer to device.
- *  @param[in] acc_avg  Requested averaging value.
- *  @return             0 on success, negative value on error.
- */
-int inv_imu_set_accel_lp_avg(struct inv_imu_device *s, ACCEL_CONFIG1_ACCEL_FILT_AVG_t acc_avg);
-
-/** @brief Set accel Low-Noise bandwidth value.
- *  @param[in] s       Pointer to device.
- *  @param[in] acc_bw  Requested averaging value.
- *  @return            0 on success, negative value on error.
- */
-int inv_imu_set_accel_ln_bw(struct inv_imu_device *s, ACCEL_CONFIG1_ACCEL_FILT_BW_t acc_bw);
-
-/** @brief Set gyro Low-Noise bandwidth value.
- *  @param[in] s       Pointer to device.
- *  @param[in] gyr_bw  Requested averaging value.
- *  @return            0 on success, negative value on error.
- */
-int inv_imu_set_gyro_ln_bw(struct inv_imu_device *s, GYRO_CONFIG1_GYRO_FILT_BW_t gyr_bw);
 
 /** @brief Set timestamp resolution.
  *  @param[in] s                Pointer to device.
@@ -447,6 +446,28 @@ int inv_imu_configure_fifo_data_rate(struct inv_imu_device *s, FDR_CONFIG_FDR_SE
  *  @return driver version a char array "x.y.z-suffix"
  */
 const char *inv_imu_get_version(void);
+
+/** @brief Converts two bytes in one unsigned half-word depending on endianness 
+ *  @param[in] endianness  IMU's endianness.
+ *  @param[in]  in         Pointer to input.
+ *  @param[out] out        Pointer to output.
+ */
+static inline void format_u16_data(uint8_t endianness, const uint8_t *in, uint16_t *out)
+{
+	*out = (uint16_t)(endianness == INTF_CONFIG0_DATA_BIG_ENDIAN ? (in[0] << 8) | in[1] :
+                                                                   (in[1] << 8) | in[0]);
+}
+
+/** @brief Converts two bytes in one signed half-word depending on endianness 
+ *  @param[in] endianness  IMU's endianness.
+ *  @param[in]  in         Pointer to input.
+ *  @param[out] out        Pointer to output.
+ */
+static inline void format_s16_data(uint8_t endianness, const uint8_t *in, int16_t *out)
+{
+	*out = (int16_t)(endianness == INTF_CONFIG0_DATA_BIG_ENDIAN ? (in[0] << 8) | in[1] :
+                                                                  (in[1] << 8) | in[0]);
+}
 
 #ifdef __cplusplus
 }

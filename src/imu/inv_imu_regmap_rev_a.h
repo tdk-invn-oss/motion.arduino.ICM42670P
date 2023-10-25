@@ -20,35 +20,18 @@
    OF THE SOFTWARE.
  * ________________________________________________________________________________________________________
  */
-#ifndef _INV_IMU_REGMAP_H_
-#define _INV_IMU_REGMAP_H_
+#ifndef _INV_IMU_REGMAP_REV_A_H_
+#define _INV_IMU_REGMAP_REV_A_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** @file inv_imu_regmap.h
+/** @file inv_imu_regmap_rev_a.h
  * File exposing the device register map
  */
 
 #include <stdint.h>
-
-/* forward declaration */
-struct inv_imu_device;
-
-
-
-/* ----------------------------------------------------------------------------
- * Device Register map
- *
- * Next macros defines address for all registers as listed by device 
- * datasheet.
- * Macros name is <REGISTER_NAME> with REGISTER_NAME being the name of
- * the corresponding register in datasheet.
- * Note that macro name is <REGISTER_NAME>_Bx with x being the bank 
- * number for registers that are in bank 1 and further (suffix is ommitted for 
- * bank 0 registers)
- * ---------------------------------------------------------------------------- */
 
 /* BANK0 */
 #define MCLK_RDY                                                           0x10000
@@ -3388,4 +3371,4 @@ struct inv_imu_device;
 }
 #endif
 
-#endif  /*#ifndef _INV_IMU_REGMAP_H_*/
+#endif  /*#ifndef _INV_IMU_REGMAP_REV_A_H_*/

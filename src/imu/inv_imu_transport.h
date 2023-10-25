@@ -37,24 +37,30 @@ extern "C" {
 
 #include <stdint.h>
 
+#include "imu/inv_imu_defs.h"
+
 /* forward declaration */
 struct inv_imu_device;
 
-/** Available serial interface type. */
-typedef enum { 
-	UI_I2C, 
-	UI_SPI4, 
-	UI_SPI3 
-} SERIAL_IF_TYPE_t;
+/* Available serial interface type. */
+#define UI_I2C  0 /**< identifies I2C interface. */
+#define UI_SPI4 1 /**< identifies 4-wire SPI interface. */
+#define UI_SPI3 2 /**< identifies 3-wire SPI interface. */
+
+/** @brief Serif type definition.
+ *  @deprecated Kept for retrocompatibility. Replaced with `uint32_t` type
+ *              in `struct inv_imu_serif` struct.
+ */
+typedef uint32_t SERIAL_IF_TYPE_t;
 
 /** Serial interface definition */
 struct inv_imu_serif {
 	void *context;
 	int (*read_reg)(struct inv_imu_serif *serif, uint8_t reg, uint8_t *buf, uint32_t len);
 	int (*write_reg)(struct inv_imu_serif *serif, uint8_t reg, const uint8_t *buf, uint32_t len);
-	uint32_t         max_read;
-	uint32_t         max_write;
-	SERIAL_IF_TYPE_t serif_type;
+	uint32_t max_read;
+	uint32_t max_write;
+	uint32_t serif_type;
 };
 
 /** Transport interface definition. */
@@ -67,7 +73,9 @@ struct inv_imu_transport {
 	/** Contains mirrored values of some IP registers. */
 	struct register_cache {
 		uint8_t pwr_mgmt0_reg;
+#if ICM_IS_GYRO_SUPPORTED
 		uint8_t gyro_config0_reg;
+#endif
 		uint8_t accel_config0_reg;
 		uint8_t tmst_config1_reg;
 	} register_cache;

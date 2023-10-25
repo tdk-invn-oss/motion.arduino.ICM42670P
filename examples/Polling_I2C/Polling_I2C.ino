@@ -21,8 +21,6 @@ void setup() {
   IMU.startGyro(100,2000);
   // Wait IMU to start
   delay(100);
-  // Plotter axis header
-  Serial.println("AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,Temperature");
 }
 
 void loop() {
@@ -33,18 +31,19 @@ void loop() {
   IMU.getDataFromRegisters(&imu_event);
 
   // Format data for Serial Plotter
-  Serial.print(imu_event.accel[0]);
-  Serial.print(",");
-  Serial.print(imu_event.accel[1]);
-  Serial.print(",");
-  Serial.print(imu_event.accel[2]);
-  Serial.print(",");
-  Serial.print(imu_event.gyro[0]);
-  Serial.print(",");
-  Serial.print(imu_event.gyro[1]);
-  Serial.print(",");
-  Serial.print(imu_event.gyro[2]);
-  Serial.print(",");
+  Serial.print("AccelX:");
+  Serial.println(imu_event.accel[0]);
+  Serial.print("AccelY:");
+  Serial.println(imu_event.accel[1]);
+  Serial.print("AccelZ:");
+  Serial.println(imu_event.accel[2]);
+  Serial.print("GyroX:");
+  Serial.println(imu_event.gyro[0]);
+  Serial.print("GyroY:");
+  Serial.println(imu_event.gyro[1]);
+  Serial.print("GyroZ:");
+  Serial.println(imu_event.gyro[2]);
+  Serial.print("Temperature:");
   Serial.println(imu_event.temperature);
 
   // Run @ ODR 100Hz

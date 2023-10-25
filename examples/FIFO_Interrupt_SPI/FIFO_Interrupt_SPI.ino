@@ -12,18 +12,19 @@ void irq_handler(void) {
 void event_cb(inv_imu_sensor_event_t *evt) {
   // Format data for Serial Plotter
   if(IMU.isAccelDataValid(evt)&&IMU.isGyroDataValid(evt)) {
-    Serial.print(evt->accel[0]);
-    Serial.print(",");
-    Serial.print(evt->accel[1]);
-    Serial.print(",");
-    Serial.print(evt->accel[2]);
-    Serial.print(",");
-    Serial.print(evt->gyro[0]);
-    Serial.print(",");
-    Serial.print(evt->gyro[1]);
-    Serial.print(",");
-    Serial.print(evt->gyro[2]);
-    Serial.print(",");
+    Serial.print("AccelX:");
+    Serial.println(evt->accel[0]);
+    Serial.print("AccelY:");
+    Serial.println(evt->accel[1]);
+    Serial.print("AccelZ:");
+    Serial.println(evt->accel[2]);
+    Serial.print("GyroX:");
+    Serial.println(evt->gyro[0]);
+    Serial.print("GyroY:");
+    Serial.println(evt->gyro[1]);
+    Serial.print("GyroZ:");
+    Serial.println(evt->gyro[2]);
+    Serial.print("Temperature:");
     Serial.println(evt->temperature);
   }
 }
@@ -46,8 +47,6 @@ void setup() {
   IMU.startAccel(100,16);
   // Gyro ODR = 100 Hz and Full Scale Range = 2000 dps
   IMU.startGyro(100,2000);
-  // Plotter axis header
-  Serial.println("AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,Temperature");
 }
 
 void loop() {

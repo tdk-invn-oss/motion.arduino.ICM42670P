@@ -28,11 +28,14 @@
 extern "C" {
 #endif
 
+#define ICM42670P
+
 /** @file inv_imu_defs.h
  * File exposing the device register map
  */
 
 #include <stdint.h>
+
 /* List whoami values for all device variants*/
 #define T1000_WHOAMI     0x30
 #define ICM42607P_WHOAMI 0x60
@@ -40,28 +43,64 @@ extern "C" {
 #define ICM42670T_WHOAMI 0x64
 #define ICM42670S_WHOAMI 0x69
 #define ICM42680_WHOAMI  0x80
+#define ICM42608P_WHOAMI 0x3F
+#define ICM42671P_WHOAMI 0x52
+#define ICM42671S_WHOAMI 0x54
+#define ICM42370P_WHOAMI 0x0D
 
-
-#define  ICM42670P
+#define ICM_REV_A 0xA
+#define ICM_REV_B 0XB
 
 /* Define whoami value for the targeted product and make sure the target is valid */
 #if defined(T1000)
-#define ICM_WHOAMI T1000_WHOAMI
+#define ICM_WHOAMI            T1000_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 1
 #elif defined(ICM42607P)
-#define ICM_WHOAMI ICM42607P_WHOAMI
+#define ICM_WHOAMI            ICM42607P_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 1
 #elif defined(ICM42670P)
-#define ICM_WHOAMI ICM42670P_WHOAMI
+#define ICM_WHOAMI            ICM42670P_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 1
 #elif defined(ICM42670T)
-#define ICM_WHOAMI ICM42670T_WHOAMI
+#define ICM_WHOAMI            ICM42670T_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 1
 #elif defined(ICM42670S)
-#define ICM_WHOAMI ICM42670S_WHOAMI
+#define ICM_WHOAMI            ICM42670S_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 1
 #elif defined(ICM42680)
-#define ICM_WHOAMI ICM42680_WHOAMI
+#define ICM_WHOAMI            ICM42680_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 1
+#elif defined(ICM42608P)
+#define ICM_WHOAMI            ICM42608P_WHOAMI
+#define ICM_REV               ICM_REV_B
+#define ICM_IS_GYRO_SUPPORTED 1
+#elif defined(ICM42671P)
+#define ICM_WHOAMI            ICM42671P_WHOAMI
+#define ICM_REV               ICM_REV_B
+#define ICM_IS_GYRO_SUPPORTED 1
+#elif defined(ICM42671S)
+#define ICM_WHOAMI            ICM42671S_WHOAMI
+#define ICM_REV               ICM_REV_B
+#define ICM_IS_GYRO_SUPPORTED 1
+#elif defined(ICM42370P)
+#define ICM_WHOAMI            ICM42370P_WHOAMI
+#define ICM_REV               ICM_REV_A
+#define ICM_IS_GYRO_SUPPORTED 0
 #else
 #error "Please define which IMU variant is targeted."
 #endif
 
-#include "imu/inv_imu_regmap.h"
+#if ICM_REV == ICM_REV_A
+#include "imu/inv_imu_regmap_rev_a.h"
+#elif ICM_REV == ICM_REV_B
+#include "imu/inv_imu_regmap_rev_b.h"
+#endif
 
 /* ----------------------------------------------------------------------------
  * Device features
@@ -107,12 +146,24 @@ extern "C" {
 typedef union {
 	unsigned char Byte;
 	struct {
+#if ICM_IS_GYRO_SUPPORTED
 		unsigned char gyro_odr_different : 1;
+#else
+		unsigned char reserved1 : 1;
+#endif
 		unsigned char accel_odr_different : 1;
+#if ICM_IS_GYRO_SUPPORTED
 		unsigned char fsync_bit : 1;
+#else
+		unsigned char reserved2 : 1;
+#endif
 		unsigned char timestamp_bit : 1;
 		unsigned char twentybits_bit : 1;
+#if ICM_IS_GYRO_SUPPORTED
 		unsigned char gyro_bit : 1;
+#else
+		unsigned char reserved3 : 1;
+#endif
 		unsigned char accel_bit : 1;
 		unsigned char msg_bit : 1;
 	} bits;
@@ -227,6 +278,7 @@ typedef enum {
 	PWR_MGMT0_IDLE_EN  = (0x00 << PWR_MGMT0_IDLE_POS),
 } PWR_MGMT0_IDLE_t;
 
+#if ICM_IS_GYRO_SUPPORTED
 /* GYRO_MODE */
 typedef enum {
 	PWR_MGMT0_GYRO_MODE_LN      = (0x03 << PWR_MGMT0_GYRO_MODE_POS),
@@ -234,6 +286,7 @@ typedef enum {
 	PWR_MGMT0_GYRO_MODE_STANDBY = (0x01 << PWR_MGMT0_GYRO_MODE_POS),
 	PWR_MGMT0_GYRO_MODE_OFF     = (0x00 << PWR_MGMT0_GYRO_MODE_POS),
 } PWR_MGMT0_GYRO_MODE_t;
+#endif
 
 /* ACCEL_MODE */
 typedef enum {
@@ -242,6 +295,7 @@ typedef enum {
 	PWR_MGMT0_ACCEL_MODE_OFF = 0x00,
 } PWR_MGMT0_ACCEL_MODE_t;
 
+#if ICM_IS_GYRO_SUPPORTED
 /*
  * GYRO_CONFIG0
  * Register Name: GYRO_CONFIG0
@@ -269,6 +323,7 @@ typedef enum {
 	GYRO_CONFIG0_ODR_800_HZ    = 0x6,
 	GYRO_CONFIG0_ODR_1600_HZ   = 0x5,
 } GYRO_CONFIG0_ODR_t;
+#endif
 
 /*
  * ACCEL_CONFIG0
@@ -298,6 +353,7 @@ typedef enum {
 	ACCEL_CONFIG0_ODR_1600_HZ   = 0x5,
 } ACCEL_CONFIG0_ODR_t;
 
+#if ICM_IS_GYRO_SUPPORTED
 /*
  * GYRO_CONFIG1
  * Register Name: GYRO_CONFIG1
@@ -314,6 +370,7 @@ typedef enum {
 	GYRO_CONFIG1_GYRO_FILT_BW_180       = (0x01 << GYRO_CONFIG1_GYRO_UI_FILT_BW_POS),
 	GYRO_CONFIG1_GYRO_FILT_BW_NO_FILTER = (0x00 << GYRO_CONFIG1_GYRO_UI_FILT_BW_POS),
 } GYRO_CONFIG1_GYRO_FILT_BW_t;
+#endif
 
 /*
  * ACCEL_CONFIG1
@@ -552,11 +609,13 @@ typedef enum {
 	FIFO_CONFIG5_TMST_FSYNC_DIS = (0x0 << FIFO_CONFIG5_FIFO_TMST_FSYNC_EN_POS),
 } FIFO_CONFIG5_TMST_FSYNC_t;
 
+#if ICM_IS_GYRO_SUPPORTED
 /* FIFO_GYRO_EN */
 typedef enum {
 	FIFO_CONFIG5_GYRO_EN  = (0x1 << FIFO_CONFIG5_FIFO_GYRO_EN_POS),
 	FIFO_CONFIG5_GYRO_DIS = (0x0 << FIFO_CONFIG5_FIFO_GYRO_EN_POS),
 } FIFO_CONFIG5_GYRO_t;
+#endif
 
 /* FIFO_ACCEL_EN*/
 typedef enum {
@@ -564,6 +623,7 @@ typedef enum {
 	FIFO_CONFIG5_ACCEL_DIS = 0x00,
 } FIFO_CONFIG5_ACCEL_t;
 
+#if ICM_IS_GYRO_SUPPORTED
 /*
  * FSYNC_CONFIG_MREG1
  * Register Name: FSYNC_CONFIG
@@ -580,6 +640,7 @@ typedef enum {
 	FSYNC_CONFIG_UI_SEL_ACCEL_Y = (0x6 << FSYNC_CONFIG_FSYNC_UI_SEL_POS),
 	FSYNC_CONFIG_UI_SEL_ACCEL_Z = (0x7 << FSYNC_CONFIG_FSYNC_UI_SEL_POS),
 } FSYNC_CONFIG_UI_SEL_t;
+#endif
 
 /*
  * ST_CONFIG_MREG1
@@ -594,9 +655,11 @@ typedef enum {
 	ST_CONFIG_ACCEL_ST_LIM_50 = (7 << ST_CONFIG_ACCEL_ST_LIM_POS),
 } ST_CONFIG_ACCEL_ST_LIM_t;
 
+#if ICM_IS_GYRO_SUPPORTED
 typedef enum {
 	ST_CONFIG_GYRO_ST_LIM_50 = (7 << ST_CONFIG_GYRO_ST_LIM_POS),
 } ST_CONFIG_GYRO_ST_LIM_t;
+#endif
 
 /*
  * SELFTEST_MREG1
@@ -607,8 +670,10 @@ typedef enum {
 typedef enum {
 	SELFTEST_DIS      = 0,
 	SELFTEST_ACCEL_EN = SELFTEST_ACCEL_ST_EN_MASK,
-	SELFTEST_GYRO_EN  = SELFTEST_GYRO_ST_EN_MASK,
-	SELFTEST_EN       = (SELFTEST_ACCEL_ST_EN_MASK | SELFTEST_GYRO_ST_EN_MASK)
+#if ICM_IS_GYRO_SUPPORTED
+	SELFTEST_GYRO_EN = SELFTEST_GYRO_ST_EN_MASK,
+	SELFTEST_EN      = (SELFTEST_ACCEL_ST_EN_MASK | SELFTEST_GYRO_ST_EN_MASK)
+#endif
 } SELFTEST_ACCEL_GYRO_ST_EN_t;
 
 /*
@@ -885,7 +950,6 @@ typedef enum {
 	APEX_CONFIG11_HIGHG_PEAK_TH_7250_MG = (0x1C << APEX_CONFIG11_HIGHG_PEAK_TH_SEL_POS),
 	APEX_CONFIG11_HIGHG_PEAK_TH_7500_MG = (0x1D << APEX_CONFIG11_HIGHG_PEAK_TH_SEL_POS),
 	APEX_CONFIG11_HIGHG_PEAK_TH_7750_MG = (0x1E << APEX_CONFIG11_HIGHG_PEAK_TH_SEL_POS),
-	APEX_CONFIG11_HIGHG_PEAK_TH_8000_MG = (0x1F << APEX_CONFIG11_HIGHG_PEAK_TH_SEL_POS),
 } APEX_CONFIG11_HIGHG_PEAK_TH_t;
 
 /* HIGHG_TIME_TH_SEL */
