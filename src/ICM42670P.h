@@ -52,9 +52,13 @@ class ICM42670P {
     int getDataFromFifo(ICM42670P_sensor_event_cb event_cb);
     bool isAccelDataValid(inv_imu_sensor_event_t *evt);
     bool isGyroDataValid(inv_imu_sensor_event_t *evt);
-
+    uint8_t i2c_address;
+    TwoWire *i2c;
+    uint8_t spi_cs;
+    SPIClass *spi;
   protected:
     struct inv_imu_device icm_driver;
+    bool use_spi;
     ACCEL_CONFIG0_ODR_t accel_freq_to_param(uint16_t accel_freq_hz);
     GYRO_CONFIG0_ODR_t gyro_freq_to_param(uint16_t gyro_freq_hz);
     ACCEL_CONFIG0_FS_SEL_t accel_fsr_g_to_param(uint16_t accel_fsr_g);

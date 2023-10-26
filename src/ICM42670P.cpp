@@ -26,23 +26,16 @@
 #include "Arduino.h"
 #include "ICM42670P.h"
 
-static int i2c_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen);
-static int i2c_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
-static int spi_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen);
-static int spi_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
+static int i2c_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen);
+static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
+static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen);
+static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
 static void event_cb(inv_imu_sensor_event_t *event);
 
-// i2c and SPI interfaces are used from C driver callbacks, without any knowledge of the object
-// As they are declared as static, they will be overriden each time a new ICM42670P object is created
 // i2c
-uint8_t i2c_address = 0;
-static TwoWire *i2c = NULL;
 #define ICM42670P_I2C_SPEED 1000000
 #define ICM42670P_I2C_ADDRESS 0x68
 // spi
-static SPIClass *spi = NULL;
-static uint8_t chip_select_id = 0;
-bool _useSPI = false;
 #define SPI_READ 0x80
 #define SPI_CLOCK 16000000
 
@@ -56,12 +49,18 @@ static struct inv_imu_device *icm_driver_ptr = NULL;
 ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb) {
   i2c = &i2c_ref; 
   i2c_address = ICM42670P_I2C_ADDRESS | (lsb ? 0x1 : 0);
+  use_spi = false;
+  spi = NULL;
+  spi_cs = 0;
 }
 
 // ICM42670P constructor for spi interface
 ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id) {
   spi = &spi_ref;
-  chip_select_id = cs_id; 
+  spi_cs = cs_id; 
+  use_spi = true;
+  i2c = NULL;
+  i2c_address = 0;
 }
 
 /* starts communication with the ICM42670P */
@@ -78,14 +77,14 @@ int ICM42670P::begin() {
     icm_serif.write_reg = i2c_write;
   } else {
     spi->begin();
-    pinMode(chip_select_id,OUTPUT);
-    digitalWrite(chip_select_id,HIGH);
+    pinMode(spi_cs,OUTPUT);
+    digitalWrite(spi_cs,HIGH);
     icm_serif.serif_type = UI_SPI4;
     icm_serif.read_reg  = spi_read;
     icm_serif.write_reg = spi_write;
   }
   /* Initialize serial interface between MCU and Icm43xxx */
-  icm_serif.context   = 0;        /* no need */
+  icm_serif.context   = (void*)this;
   icm_serif.max_read  = 2048; /* maximum number of bytes allowed per serial read */
   icm_serif.max_write = 2048; /* maximum number of bytes allowed per serial write */
   rc = inv_imu_init(&icm_driver, &icm_serif, NULL);
@@ -170,26 +169,28 @@ bool ICM42670P::isGyroDataValid(inv_imu_sensor_event_t *evt) {
   return (evt->sensor_mask & (1<<INV_SENSOR_GYRO));
 }
 
-static int i2c_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
-  i2c->beginTransmission(i2c_address);
-  i2c->write(reg);
+static int i2c_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
+  ICM42670P* obj = (ICM42670P*)serif->context;
+  obj->i2c->beginTransmission(obj->i2c_address);
+  obj->i2c->write(reg);
   for(uint8_t i = 0; i < wlen; i++) {
-    i2c->write(wbuffer[i]);
+    obj->i2c->write(wbuffer[i]);
   }
-  i2c->endTransmission();
+  obj->i2c->endTransmission();
   return 0;
 }
 
-static int i2c_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
+static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
+  ICM42670P* obj = (ICM42670P*)serif->context;
   uint16_t rx_bytes = 0;
 
-  i2c->beginTransmission(i2c_address);
-  i2c->write(reg);
-  i2c->endTransmission(false);
-  rx_bytes = i2c->requestFrom(i2c_address, rlen);
+  obj->i2c->beginTransmission(obj->i2c_address);
+  obj->i2c->write(reg);
+  obj->i2c->endTransmission(false);
+  rx_bytes = obj->i2c->requestFrom(obj->i2c_address, rlen);
   if (rlen == rx_bytes) {
     for(uint8_t i = 0; i < rx_bytes; i++) {
-      rbuffer[i] = i2c->read();
+      rbuffer[i] = obj->i2c->read();
     }
     return 0;
   } else {
@@ -197,25 +198,27 @@ static int i2c_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer
   }
 }
 
-static int spi_write(struct inv_imu_serif * serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
-  spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
-  digitalWrite(chip_select_id,LOW);
-  spi->transfer(reg);
+static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
+  ICM42670P* obj = (ICM42670P*)serif->context;
+  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
+  digitalWrite(obj->spi_cs,LOW);
+  obj->spi->transfer(reg);
   for(uint8_t i = 0; i < wlen; i++) {
-    spi->transfer(wbuffer[i]);
+    obj->spi->transfer(wbuffer[i]);
   }
-  digitalWrite(chip_select_id,HIGH);
-  spi->endTransaction();
+  digitalWrite(obj->spi_cs,HIGH);
+  obj->spi->endTransaction();
   return 0;
 }
 
-static int spi_read(struct inv_imu_serif * serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
-  spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
-  digitalWrite(chip_select_id,LOW);
-  spi->transfer(reg | SPI_READ);
-  spi->transfer(rbuffer,rlen);
-  digitalWrite(chip_select_id,HIGH);
-  spi->endTransaction();
+static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
+  ICM42670P* obj = (ICM42670P*)serif->context;
+  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
+  digitalWrite(obj->spi_cs,LOW);
+  obj->spi->transfer(reg | SPI_READ);
+  obj->spi->transfer(rbuffer,rlen);
+  digitalWrite(obj->spi_cs,HIGH);
+  obj->spi->endTransaction();
   return 0;
 }
 
