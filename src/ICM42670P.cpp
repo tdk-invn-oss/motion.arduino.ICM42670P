@@ -1,30 +1,23 @@
 /*
  *
- * ------------------------------------------------------------------------------------------------------------
- * Copyright (c) 2022 InvenSense, Inc All rights reserved.
+ * Copyright (c) [2022] by InvenSense, Inc.
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * This software, related documentation and any modifications thereto (collectively "Software") is subject
- * to InvenSense, Inc and its licencors' intellectual property rights under U.S. and international copyright
- * and other intellectual property rights laws.
- *
- * InvenSense, Inc and its licencors retain all intellectual property and proprietary rights in and to the Software
- * and any use, reproduction, disclosure or distribution of the Software without an express license agreement
- * from InvenSense, Inc is strictly prohibited.
- *
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, THE SOFTWARE IS
- * PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
- * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, IN NO EVENT SHALL
- * InvenSense, Inc BE LIABLE FOR ANY DIRECT, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY
- * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTUOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- * OF THE SOFTWARE.
- *
- * ------------------------------------------------------------------------------------------------------------
  */
  
 #include "Arduino.h"
 #include "ICM42670P.h"
+#include "imu/inv_imu_apex.h"
 
 static int i2c_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen);
 static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
@@ -32,13 +25,16 @@ static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer,
 static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
 static void event_cb(inv_imu_sensor_event_t *event);
 
+static char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
+
 // i2c
-#define ICM42670P_I2C_SPEED 1000000
+#define ICM42670P_I2C_SPEED 400000
 #define ICM42670P_I2C_ADDRESS 0x68
 // spi
 #define SPI_READ 0x80
 #define SPI_CLOCK 16000000
-
+// WOM threshold in mg
+#define WOM_THRESHOLD 50 /* = 50 * 1000 / 256 = 195 mg */
 // This is used by the event callback (not object aware), declared static
 static inv_imu_sensor_event_t* event;
 
@@ -98,7 +94,7 @@ int ICM42670P::begin() {
   if(rc != 0) {
     return -2;
   }
-  if ((who_am_i != ICM42670P_WHOAMI) && (who_am_i != ICM42670S_WHOAMI) && (who_am_i != ICM42670T_WHOAMI)) {
+  if (who_am_i != INV_IMU_WHOAMI) {
     return -3;
   }
 
@@ -122,14 +118,10 @@ int ICM42670P::startGyro(uint16_t odr, uint16_t fsr) {
   return rc;
 }
 
-int ICM42670P::getDataFromRegisters(inv_imu_sensor_event_t* evt) {
-  if(evt != NULL) {
-    // Set event buffer to be used by the callback
-    event = evt;
-    return inv_imu_get_data_from_registers(&icm_driver);
-  } else {
-    return -1;
-  }
+int ICM42670P::getDataFromRegisters(inv_imu_sensor_event_t& evt) {
+  // Set event buffer to be used by the callback
+  event = &evt;
+  return inv_imu_get_data_from_registers(&icm_driver);
 }
 
 int ICM42670P::enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark) {
@@ -167,6 +159,134 @@ bool ICM42670P::isAccelDataValid(inv_imu_sensor_event_t *evt) {
 
 bool ICM42670P::isGyroDataValid(inv_imu_sensor_event_t *evt) {
   return (evt->sensor_mask & (1<<INV_SENSOR_GYRO));
+}
+
+int ICM42670P::initApex(uint8_t intpin, ICM42670P_irq_handler handler)
+{
+  int                       rc = 0;
+  inv_imu_apex_parameters_t apex_inputs;
+  inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
+
+  /* Disabling FIFO usage to optimize power consumption */
+  rc |= inv_imu_configure_fifo(&icm_driver, INV_IMU_FIFO_DISABLED);
+
+  /* Disable FIFO threshold, DRDY and WOM interrupts on INT1 */
+  rc |= inv_imu_get_config_int1(&icm_driver, &config_int);
+  config_int.INV_FIFO_THS = INV_IMU_DISABLE;
+  config_int.INV_UI_DRDY  = INV_IMU_DISABLE;
+  config_int.INV_WOM_X    = INV_IMU_DISABLE;
+  config_int.INV_WOM_Y    = INV_IMU_DISABLE;
+  config_int.INV_WOM_Z    = INV_IMU_DISABLE;
+  rc |= inv_imu_set_config_int1(&icm_driver, &config_int);
+
+  /* Enable accel in LP mode */
+  rc |= inv_imu_enable_accel_low_power_mode(&icm_driver);
+
+  /* Disable Pedometer before configuring it */
+  rc |= inv_imu_apex_disable_pedometer(&icm_driver);
+  rc |= inv_imu_apex_disable_tilt(&icm_driver);
+
+  rc |= inv_imu_set_accel_frequency(&icm_driver, ACCEL_CONFIG0_ODR_50_HZ);
+  rc |= inv_imu_apex_set_frequency(&icm_driver, APEX_CONFIG1_DMP_ODR_50Hz);
+
+  /* Set APEX parameters */
+  rc |= inv_imu_apex_init_parameters_struct(&icm_driver, &apex_inputs);
+  apex_inputs.power_save =APEX_CONFIG0_DMP_POWER_SAVE_DIS;
+  rc |= inv_imu_apex_configure_parameters(&icm_driver, &apex_inputs);
+
+  pinMode(intpin,INPUT);
+  attachInterrupt(intpin,handler,RISING);
+
+  return rc;
+}
+
+int ICM42670P::startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler)
+{
+  int rc = 0;
+  rc |= initApex(intpin,handler);
+  rc |= inv_imu_apex_enable_tilt(&icm_driver);
+}
+
+int ICM42670P::startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)
+{
+  int rc = 0;
+  step_cnt_ovflw = 0;
+  rc |= initApex(intpin,handler);
+  rc |= inv_imu_apex_enable_pedometer(&icm_driver);
+}
+
+int ICM42670P::getPedometer(uint32_t& step_count, float& step_cadence, char*& activity)
+{
+  int rc = 0;
+  uint8_t  int_status3;
+  
+  /* Read APEX interrupt status */
+  rc |= inv_imu_read_reg(&icm_driver, INT_STATUS3, 1, &int_status3);
+
+  if (int_status3 & INT_STATUS3_STEP_CNT_OVF_INT_MASK)
+    step_cnt_ovflw++;
+
+  if (int_status3 & (INT_STATUS3_STEP_DET_INT_MASK)) {
+    inv_imu_apex_step_activity_t apex_data0;
+    float nb_samples           = 0;
+
+    rc |= inv_imu_apex_get_data_activity(&icm_driver, &apex_data0);
+    // to do: detect step counter overflow?
+    step_count = apex_data0.step_cnt + step_cnt_ovflw*(uint32_t)UINT16_MAX;	
+    /* Converting u6.2 to float */
+    nb_samples = (apex_data0.step_cadence >> 2) +
+        (float)(apex_data0.step_cadence & 0x03) * 0.25f;
+    if(nb_samples != 0)
+    {
+      step_cadence = (float)50 / nb_samples;
+    } else {
+      step_cadence = 0;
+    }
+    activity = APEX_ACTIVITY[apex_data0.activity_class];
+  } else {
+    return -11;  
+  }
+
+  return rc;
+}
+
+int ICM42670P::startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler)
+{
+  int rc = 0;
+  inv_imu_apex_parameters_t apex_inputs;
+  inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
+
+  /* Disabling FIFO usage to optimize power consumption */
+  rc |= inv_imu_configure_fifo(&icm_driver, INV_IMU_FIFO_DISABLED);
+
+  /* Disable FIFO threshold, DRDY and WOM interrupts on INT1 */
+  rc |= inv_imu_get_config_int1(&icm_driver, &config_int);
+  config_int.INV_FIFO_THS = INV_IMU_DISABLE;
+  config_int.INV_UI_DRDY  = INV_IMU_DISABLE;
+  rc |= inv_imu_set_config_int1(&icm_driver, &config_int);
+
+  /* Disable Pedometer before configuring it */
+  rc |= inv_imu_apex_disable_pedometer(&icm_driver);
+  rc |= inv_imu_apex_disable_tilt(&icm_driver);
+
+  pinMode(intpin,INPUT);
+  attachInterrupt(intpin,handler,RISING);
+
+  /* 
+   * Optimize power consumption:
+   * - Disable FIFO usage.
+   * - Set 2X averaging.
+   * - Use Low-Power mode at low frequency.
+   */
+  rc |= inv_imu_set_accel_lp_avg(&icm_driver, ACCEL_CONFIG1_ACCEL_FILT_AVG_2);
+  rc |= inv_imu_set_accel_frequency(&icm_driver, ACCEL_CONFIG0_ODR_12_5_HZ);
+  rc |= inv_imu_enable_accel_low_power_mode(&icm_driver);
+
+  /* Configure and enable WOM */
+  rc |= inv_imu_configure_wom(&icm_driver, WOM_THRESHOLD, WOM_THRESHOLD, WOM_THRESHOLD,
+							WOM_CONFIG_WOM_INT_MODE_ORED, WOM_CONFIG_WOM_INT_DUR_1_SMPL);
+  rc |= inv_imu_enable_wom(&icm_driver);
+  return rc;
 }
 
 static int i2c_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {

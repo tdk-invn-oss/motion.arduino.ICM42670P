@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) [2015] by InvenSense, Inc.
+ * Copyright (c) [2018] by InvenSense, Inc.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted.
@@ -15,19 +15,34 @@
  *
  */
 
-#ifndef _INV_IDD_EXPORT_H_
-#define _INV_IDD_EXPORT_H_
+#ifndef _INV_IMU_H_
+#define _INV_IMU_H_
 
-#if defined(_WIN32)
-	#if !defined(INV_EXPORT) && defined(INV_DO_DLL_EXPORT)
-		#define INV_EXPORT __declspec(dllexport)
-	#elif !defined(INV_EXPORT) && defined(INV_DO_DLL_IMPORT)
-		#define INV_EXPORT __declspec(dllimport)
-	#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#if !defined(INV_EXPORT)
-	#define INV_EXPORT
+/** @defgroup IMU IMU
+ *  @brief Describes IMU
+ *  @{
+ */
+
+/** @file inv_imu.h */
+
+
+/* Device ID */
+#define ICM42670P
+
+/* Device description */
+#define INV_IMU_STRING_ID         "ICM42670P"
+#define INV_IMU_WHOAMI            0x67
+#define INV_IMU_REV               INV_IMU_REV_A
+#define INV_IMU_IS_GYRO_SUPPORTED 1
+
+#ifdef __cplusplus
+}
 #endif
 
-#endif /* _INV_IDD_EXPORT_H_ */
+#endif /* #ifndef _INV_IMU_H_ */
+
+/** @} */

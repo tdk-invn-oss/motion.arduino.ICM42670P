@@ -3,3 +3,8 @@ begin	KEYWORD2
 startAccel	KEYWORD2
 startGyro	KEYWORD2
 getDataFromRegisters	KEYWORD2
+enableFifoInterrupt	KEYWORD2
+getDataFromFifo	KEYWORD2
+isAccelDataValid	KEYWORD2
+isGyroDataValid	KEYWORD2
+inv_imu_sensor_event_t		KEYWORD2

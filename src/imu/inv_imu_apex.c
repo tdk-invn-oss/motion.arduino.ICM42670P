@@ -1,32 +1,24 @@
 /*
- * ________________________________________________________________________________________________________
- * Copyright (c) 2017 InvenSense Inc. All rights reserved.
  *
- * This software, related documentation and any modifications thereto (collectively "Software") is subject
- * to InvenSense and its licensors' intellectual property rights under U.S. and international copyright
- * and other intellectual property rights laws.
+ * Copyright (c) [2018] by InvenSense, Inc.
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * InvenSense and its licensors retain all intellectual property and proprietary rights in and to the Software
- * and any use, reproduction, disclosure or distribution of the Software without an express license agreement
- * from InvenSense is strictly prohibited.
- *
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, THE SOFTWARE IS
- * PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
- * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, IN NO EVENT SHALL
- * INVENSENSE BE LIABLE FOR ANY DIRECT, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY
- * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- * OF THE SOFTWARE.
- * ________________________________________________________________________________________________________
  */
 
-#include "imu/inv_imu_defs.h"
-#include "imu/inv_imu_extfunc.h"
-#include "imu/inv_imu_driver.h"
 #include "imu/inv_imu_apex.h"
+#include "imu/inv_imu_extfunc.h"
 
-int inv_imu_apex_enable_ff(struct inv_imu_device *s)
+int inv_imu_apex_enable_ff(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -41,7 +33,7 @@ int inv_imu_apex_enable_ff(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_disable_ff(struct inv_imu_device *s)
+int inv_imu_apex_disable_ff(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -54,7 +46,7 @@ int inv_imu_apex_disable_ff(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_enable_smd(struct inv_imu_device *s)
+int inv_imu_apex_enable_smd(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -69,7 +61,7 @@ int inv_imu_apex_enable_smd(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_disable_smd(struct inv_imu_device *s)
+int inv_imu_apex_disable_smd(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -82,8 +74,7 @@ int inv_imu_apex_disable_smd(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_init_parameters_struct(struct inv_imu_device *    s,
-                                        inv_imu_apex_parameters_t *apex_inputs)
+int inv_imu_apex_init_parameters_struct(inv_imu_device_t *s, inv_imu_apex_parameters_t *apex_inputs)
 {
 	int status = 0;
 	(void)s;
@@ -113,7 +104,7 @@ int inv_imu_apex_init_parameters_struct(struct inv_imu_device *    s,
 	return status;
 }
 
-int inv_imu_apex_configure_parameters(struct inv_imu_device *          s,
+int inv_imu_apex_configure_parameters(inv_imu_device_t *               s,
                                       const inv_imu_apex_parameters_t *apex_inputs)
 {
 	int                        status = 0;
@@ -193,7 +184,7 @@ int inv_imu_apex_configure_parameters(struct inv_imu_device *          s,
 	return status;
 }
 
-int inv_imu_apex_get_parameters(struct inv_imu_device *s, inv_imu_apex_parameters_t *apex_params)
+int inv_imu_apex_get_parameters(inv_imu_device_t *s, inv_imu_apex_parameters_t *apex_params)
 {
 	int     status = 0;
 	uint8_t data[7];
@@ -266,7 +257,7 @@ int inv_imu_apex_get_parameters(struct inv_imu_device *s, inv_imu_apex_parameter
 	return status;
 }
 
-int inv_imu_apex_set_frequency(struct inv_imu_device *s, const APEX_CONFIG1_DMP_ODR_t frequency)
+int inv_imu_apex_set_frequency(inv_imu_device_t *s, const APEX_CONFIG1_DMP_ODR_t frequency)
 {
 	uint8_t value;
 	int     status = 0;
@@ -280,7 +271,7 @@ int inv_imu_apex_set_frequency(struct inv_imu_device *s, const APEX_CONFIG1_DMP_
 	return status;
 }
 
-int inv_imu_apex_enable_pedometer(struct inv_imu_device *s)
+int inv_imu_apex_enable_pedometer(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -296,7 +287,7 @@ int inv_imu_apex_enable_pedometer(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_disable_pedometer(struct inv_imu_device *s)
+int inv_imu_apex_disable_pedometer(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -310,7 +301,7 @@ int inv_imu_apex_disable_pedometer(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_enable_tilt(struct inv_imu_device *s)
+int inv_imu_apex_enable_tilt(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -326,7 +317,7 @@ int inv_imu_apex_enable_tilt(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_disable_tilt(struct inv_imu_device *s)
+int inv_imu_apex_disable_tilt(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -340,8 +331,7 @@ int inv_imu_apex_disable_tilt(struct inv_imu_device *s)
 	return status;
 }
 
-int inv_imu_apex_get_data_activity(struct inv_imu_device *       s,
-                                   inv_imu_apex_step_activity_t *apex_activity)
+int inv_imu_apex_get_data_activity(inv_imu_device_t *s, inv_imu_apex_step_activity_t *apex_activity)
 {
 	uint8_t data[4];
 	int     status = inv_imu_read_reg(s, APEX_DATA0, 4, data);
@@ -353,7 +343,7 @@ int inv_imu_apex_get_data_activity(struct inv_imu_device *       s,
 	return status;
 }
 
-int inv_imu_apex_get_data_free_fall(struct inv_imu_device *s, uint16_t *freefall_duration)
+int inv_imu_apex_get_data_free_fall(inv_imu_device_t *s, uint16_t *freefall_duration)
 {
 	uint8_t data[2];
 	int     status = inv_imu_read_reg(s, APEX_DATA4, 2, &data[0]);
