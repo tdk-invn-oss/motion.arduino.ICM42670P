@@ -1,24 +1,18 @@
 /*
- * ________________________________________________________________________________________________________
- * Copyright (c) 2017 InvenSense Inc. All rights reserved.
  *
- * This software, related documentation and any modifications thereto (collectively "Software") is subject
- * to InvenSense and its licensors' intellectual property rights under U.S. and international copyright
- * and other intellectual property rights laws.
+ * Copyright (c) [2017] by InvenSense, Inc.
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * InvenSense and its licensors retain all intellectual property and proprietary rights in and to the Software
- * and any use, reproduction, disclosure or distribution of the Software without an express license agreement
- * from InvenSense is strictly prohibited.
- *
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, THE SOFTWARE IS
- * PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
- * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, IN NO EVENT SHALL
- * INVENSENSE BE LIABLE FOR ANY DIRECT, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY
- * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- * OF THE SOFTWARE.
- * ________________________________________________________________________________________________________
  */
 
 /** @defgroup Apex APEX
@@ -35,15 +29,7 @@
 extern "C" {
 #endif
 
-#include "imu/inv_imu_defs.h"
-
-#include "Invn/InvError.h"
-
-#include <stdint.h>
-#include <string.h>
-
-/* Forward declarations */
-struct inv_imu_device;
+#include "imu/inv_imu_driver.h"
 
 /** IMU APEX inputs parameters definition */
 typedef struct {
@@ -75,7 +61,7 @@ typedef struct inv_imu_apex_step_activity {
 	uint16_t step_cnt;
 
 	/** Walk/run cadence in number of samples. 
-	 *  Format is u6.2. (at 50Hz and 2Hz walk frequency, if the cadency 
+	 *  Format is u6.2. (at 50Hz and 2Hz walk frequency, if the cadence 
 	 *  is 25 samples, the register will output 100). 
 	 */
 	uint8_t step_cadence;
@@ -90,33 +76,33 @@ typedef struct inv_imu_apex_step_activity {
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_enable_ff(struct inv_imu_device *s);
+int inv_imu_apex_enable_ff(inv_imu_device_t *s);
 
 /** @brief Disable Free Fall.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_disable_ff(struct inv_imu_device *s);
+int inv_imu_apex_disable_ff(inv_imu_device_t *s);
 
 /** @brief Enable Significant Motion Detection.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  *  @warning SMD requires to have the pedometer enabled to work.
  */
-int inv_imu_apex_enable_smd(struct inv_imu_device *s);
+int inv_imu_apex_enable_smd(inv_imu_device_t *s);
 
 /** @brief Disable Significant Motion Detection.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_disable_smd(struct inv_imu_device *s);
+int inv_imu_apex_disable_smd(inv_imu_device_t *s);
 
 /** @brief Fill the APEX parameters structure with all the default parameters for APEX algorithms.
  *  @param[in] s             Pointer to device.
  *  @param[out] apex_inputs  Default input parameters.
  *  @return                  0 on success, negative value on error.
  */
-int inv_imu_apex_init_parameters_struct(struct inv_imu_device *    s,
+int inv_imu_apex_init_parameters_struct(inv_imu_device_t *         s,
                                         inv_imu_apex_parameters_t *apex_inputs);
 
 /** @brief Configures DMP parameters for APEX algorithms. 
@@ -127,7 +113,7 @@ int inv_imu_apex_init_parameters_struct(struct inv_imu_device *    s,
  *           any APEX features.
  *  @warning This API can't be called twice within 10 ms.
  */
-int inv_imu_apex_configure_parameters(struct inv_imu_device *          s,
+int inv_imu_apex_configure_parameters(inv_imu_device_t *               s,
                                       const inv_imu_apex_parameters_t *apex_inputs);
 
 /** @brief Returns current DMP parameters for APEX algorithms.
@@ -135,7 +121,7 @@ int inv_imu_apex_configure_parameters(struct inv_imu_device *          s,
  *  @param[out] apex_params  The current parameter, fetched from registers.
  *  @return                  0 on success, negative value on error.
  */
-int inv_imu_apex_get_parameters(struct inv_imu_device *s, inv_imu_apex_parameters_t *apex_params);
+int inv_imu_apex_get_parameters(inv_imu_device_t *s, inv_imu_apex_parameters_t *apex_params);
 
 /** @brief Configure DMP Output Data Rate for APEX algorithms.
  *  @param[in] s          Pointer to device.
@@ -143,38 +129,38 @@ int inv_imu_apex_get_parameters(struct inv_imu_device *s, inv_imu_apex_parameter
  *  @return               0 on success, negative value on error.
  *  @warning Accel frequency must be higher or equal to DMP frequency.
  */
-int inv_imu_apex_set_frequency(struct inv_imu_device *s, const APEX_CONFIG1_DMP_ODR_t frequency);
+int inv_imu_apex_set_frequency(inv_imu_device_t *s, const APEX_CONFIG1_DMP_ODR_t frequency);
 
 /** @brief Enable APEX algorithm Pedometer.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_enable_pedometer(struct inv_imu_device *s);
+int inv_imu_apex_enable_pedometer(inv_imu_device_t *s);
 
 /** @brief Disable APEX algorithm Pedometer.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_disable_pedometer(struct inv_imu_device *s);
+int inv_imu_apex_disable_pedometer(inv_imu_device_t *s);
 
 /** @brief Enable APEX algorithm Tilt.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_enable_tilt(struct inv_imu_device *s);
+int inv_imu_apex_enable_tilt(inv_imu_device_t *s);
 
 /** @brief Disable APEX algorithm Tilt.
  *  @param[in] s  Pointer to device.
  *  @return       0 on success, negative value on error.
  */
-int inv_imu_apex_disable_tilt(struct inv_imu_device *s);
+int inv_imu_apex_disable_tilt(inv_imu_device_t *s);
 
 /** @brief  Retrieve APEX pedometer outputs and format them
  *  @param[in] s              Pointer to device.
  *  @param[out] apex_activity Apex step and activity data value.
  *  @return                   0 on success, negative value on error.
  */
-int inv_imu_apex_get_data_activity(struct inv_imu_device *       s,
+int inv_imu_apex_get_data_activity(inv_imu_device_t *            s,
                                    inv_imu_apex_step_activity_t *apex_activity);
 
 /** @brief  Retrieve APEX free fall outputs and format them
@@ -182,7 +168,7 @@ int inv_imu_apex_get_data_activity(struct inv_imu_device *       s,
  *  @param[out] freefall_duration  Free fall duration in number of sample.
  *  @return                        0 on success, negative value on error.
  */
-int inv_imu_apex_get_data_free_fall(struct inv_imu_device *s, uint16_t *freefall_duration);
+int inv_imu_apex_get_data_free_fall(inv_imu_device_t *s, uint16_t *freefall_duration);
 
 #ifdef __cplusplus
 }

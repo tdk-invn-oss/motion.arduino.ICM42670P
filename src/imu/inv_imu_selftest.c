@@ -1,34 +1,27 @@
 /*
- * ________________________________________________________________________________________________________
- * Copyright (c) 2015-2015 InvenSense Inc. All rights reserved.
  *
- * This software, related documentation and any modifications thereto (collectively "Software") is subject
- * to InvenSense and its licensors' intellectual property rights under U.S. and international copyright
- * and other intellectual property rights laws.
+ * Copyright (c) [2018] by InvenSense, Inc.
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * InvenSense and its licensors retain all intellectual property and proprietary rights in and to the Software
- * and any use, reproduction, disclosure or distribution of the Software without an express license agreement
- * from InvenSense is strictly prohibited.
- *
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, THE SOFTWARE IS
- * PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
- * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, IN NO EVENT SHALL
- * INVENSENSE BE LIABLE FOR ANY DIRECT, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY
- * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- * OF THE SOFTWARE.
- * ________________________________________________________________________________________________________
  */
 
 #include "imu/inv_imu_selftest.h"
 #include "imu/inv_imu_extfunc.h"
-#include "imu/inv_imu_transport.h"
 
-static int configure_selftest_parameters(struct inv_imu_device *             s,
+static int configure_selftest_parameters(inv_imu_device_t *                  s,
                                          const inv_imu_selftest_parameters_t st_params);
 
-int inv_imu_run_selftest(struct inv_imu_device *s, const inv_imu_selftest_parameters_t st_params,
+int inv_imu_run_selftest(inv_imu_device_t *s, const inv_imu_selftest_parameters_t st_params,
                          inv_imu_selftest_output_t *st_output)
 {
 	int     status = 0;
@@ -47,7 +40,7 @@ int inv_imu_run_selftest(struct inv_imu_device *s, const inv_imu_selftest_parame
 	/* Disables Gyro/Accel sensors */
 	status |= inv_imu_read_reg(s, PWR_MGMT0, 1, &value);
 	value &= ~PWR_MGMT0_ACCEL_MODE_MASK;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	value &= ~PWR_MGMT0_GYRO_MODE_MASK;
 #endif
 	status |= inv_imu_write_reg(s, PWR_MGMT0, 1, &value);
@@ -73,7 +66,7 @@ int inv_imu_run_selftest(struct inv_imu_device *s, const inv_imu_selftest_parame
 	 */
 	status |= inv_imu_read_reg(s, SELFTEST_MREG1, 1, &value);
 	value &= ~SELFTEST_ACCEL_ST_EN_MASK;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	value &= ~SELFTEST_GYRO_ST_EN_MASK;
 #endif
 	value |= (uint8_t)st_params.st_control;
@@ -93,7 +86,7 @@ int inv_imu_run_selftest(struct inv_imu_device *s, const inv_imu_selftest_parame
 
 	/* Read self-test results (must start with ST_STATUS2) */
 	status |= inv_imu_read_reg(s, ST_STATUS2_MREG1, 1, &data);
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	st_output->gyro_status = (data & ST_STATUS2_GYRO_ST_PASS_MASK) >> ST_STATUS2_GYRO_ST_PASS_POS;
 	st_output->gyro_status |=
 	    ((data & ST_STATUS2_ST_INCOMPLETE_MASK) >> ST_STATUS2_ST_INCOMPLETE_POS) << 1;
@@ -111,7 +104,7 @@ int inv_imu_run_selftest(struct inv_imu_device *s, const inv_imu_selftest_parame
 	/* Disable self-test */
 	status |= inv_imu_read_reg(s, SELFTEST_MREG1, 1, &value);
 	value &= ~SELFTEST_ACCEL_ST_EN_MASK;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	value &= ~SELFTEST_GYRO_ST_EN_MASK;
 #endif
 	value |= (uint8_t)SELFTEST_DIS;
@@ -134,12 +127,12 @@ int inv_imu_run_selftest(struct inv_imu_device *s, const inv_imu_selftest_parame
 	return status;
 }
 
-int inv_imu_init_selftest_parameters_struct(struct inv_imu_device *        s,
+int inv_imu_init_selftest_parameters_struct(inv_imu_device_t *             s,
                                             inv_imu_selftest_parameters_t *st_params)
 {
 	(void)s;
 	st_params->st_num_samples = ST_CONFIG_16_SAMPLES;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	st_params->st_control = (SELFTEST_ACCEL_GYRO_ST_EN_t)SELFTEST_EN;
 #else
 	st_params->st_control = (SELFTEST_ACCEL_GYRO_ST_EN_t)SELFTEST_ACCEL_EN;
@@ -147,7 +140,7 @@ int inv_imu_init_selftest_parameters_struct(struct inv_imu_device *        s,
 	return 0;
 }
 
-int inv_imu_load_selftest_data(struct inv_imu_device *s)
+int inv_imu_load_selftest_data(inv_imu_device_t *s)
 {
 	int     status = 0;
 	uint8_t value;
@@ -187,7 +180,7 @@ int inv_imu_load_selftest_data(struct inv_imu_device *s)
 	return status;
 }
 
-static int configure_selftest_parameters(struct inv_imu_device *             s,
+static int configure_selftest_parameters(inv_imu_device_t *                  s,
                                          const inv_imu_selftest_parameters_t st_params)
 {
 	int     status = 0;
@@ -201,12 +194,12 @@ static int configure_selftest_parameters(struct inv_imu_device *             s,
 	status |= inv_imu_read_reg(s, ST_CONFIG_MREG1, 1, &value);
 	value &= ~((uint8_t)ST_CONFIG_ST_NUMBER_SAMPLE_MASK);
 	value &= ~((uint8_t)ST_CONFIG_ACCEL_ST_LIM_MASK);
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	value &= ~((uint8_t)ST_CONFIG_GYRO_ST_LIM_MASK);
 #endif
 	value |= (uint8_t)st_params.st_num_samples;
 	value |= (uint8_t)ST_CONFIG_ACCEL_ST_LIM_50;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	value |= (uint8_t)ST_CONFIG_GYRO_ST_LIM_50;
 #endif
 	status |= inv_imu_write_reg(s, ST_CONFIG_MREG1, 1, &value);

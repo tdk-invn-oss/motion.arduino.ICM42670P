@@ -1,7 +1,7 @@
 ![TDKInvensense](doc/pictures/TDKInvensense.jpg)
 
 # ICM42670P Arduino library
-This arduino library for the [TDK/Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42670-p).
+This arduino library is for the [TDK/Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42670-p).
 The ICM-42670-P is a high performance 6-axis MEMS MotionTracking device that combines a 3-axis gyroscope and a 3-axis accelerometer. It has a configurable host interface that supports I3C<sup>SM</sup>, I2C, and SPI serial communication, features up to 2.25 Kbytes FIFO and 2 programmable interrupts with ultra-low-power wake-on-motion support to minimize system power consumption.
 This library supports both I2C and SPI commmunication with the ICM42670P.
 
@@ -13,7 +13,11 @@ There is currenlty no Arduino shield for the ICM42670P.
 The wiring must be done manually between the Arduino motherboard and the ICM42670P daughter board or the ICM42670P eval board.
 The below wiring descriptions are given for an Arduino Zero board, it depends on the interface to be used: I2C or SPI.
 
-## Arduino Zero connection with  ICM42670P Daugnter board
+## Arduino Zero connection with  ICM42670P Daughter board
+
+There is currently no Arduino shield for the ICM42670P.
+The wiring must be done manually between the Arduino motherboard and the ICM42670P eval board.
+The below wiring description is given for an Arduino Zero board, it depends on the interface to be used:
 
 * I2C
 
@@ -139,14 +143,14 @@ Supported full scale ranges are: 250, 500, 1000, 2000 dps (any other value defau
 IMU.startGyro(100,2000);
 ```
 
-**int getDataFromRegisters(inv_imu_sensor_event_t&ast; evt)**
+**int getDataFromRegisters(inv_imu_sensor_event_t\& evt)**
 
 This method reads the ICM42670P sensor data from registers and fill the provided event structure with sensor raw data.
 Raw data can be translated to International System using the configured FSR for each sensor. Temperature in Degrees Centigrade = (TEMP_DATA / 128) + 25
 
 ```C++
-inv_imu_sensor_event_t event;
-IMU.getDataFromRegisters(&event);
+inv_imu_sensor_event_t imu_event;
+IMU.getDataFromRegisters(imu_event);
 Serial.print("AccelX:");
 Serial.println(imu_event.accel[0]);
 Serial.print("AccelY:");
@@ -184,10 +188,10 @@ IMU.enableFifoInterrupt(2,irq_handler);
 **int getDataFromFifo(ICM42670P_sensor_event_cb event_cb)**
 
 This method reads the ICM42670P sensor data samples stored in the FIFO and call the provided event handler with the sample event as parameter.
-Raw data can be translated to International System using the configured FSR for each sensor. Temperature in Degrees Centigrade = (TEMP_DATA / 128) + 25
+Raw data can be translated to International System using the configured FSR for each sensor. Temperature in Degrees Centigrade = (TEMP_DATA / 2) + 25
 
 ```C++
-void event_cb(inv_imu_sensor_event_t *evt)
+void event_cb(inv_imu_sensor_event_t&ast; evt)
 {
   Serial.print("AccelX:");
   Serial.println(evt->accel[0]);
@@ -215,12 +219,12 @@ void loop() {
 }
 ```
 
-**bool isAccelDataValid(inv_imu_sensor_event_t *evt)**
+**bool isAccelDataValid(inv_imu_sensor_event_t&ast; evt)**
 
 This method checks if the accelerometer data in the FIFO sample is valid.
 
 ```C++
-void event_cb(inv_imu_sensor_event_t *evt)
+void event_cb(inv_imu_sensor_event_t&ast; evt)
 {
   if(IMU.isAccelDataValid(evt)) {
     ...
@@ -229,12 +233,12 @@ void event_cb(inv_imu_sensor_event_t *evt)
 
 ```
 
-**bool isGyroDataValid(inv_imu_sensor_event_t *evt)**
+**bool isGyroDataValid(inv_imu_sensor_event_t&ast; evt)**
 
 This method checks if the gyroscope data in the FIFO sample is valid.
 
 ```C++
-void event_cb(inv_imu_sensor_event_t *evt)
+void event_cb(inv_imu_sensor_event_t&ast; evt)
 {
   if(IMU.isGyroDataValid(evt)) {
     ...
@@ -249,13 +253,82 @@ This structure is used by the ICM42670P driver to return raw sensor data. Availa
 |Field name|description|
 | --- | --- |
 | sensor_mask       | Mask describing available data         |
-| timestamp_fsync   | Timestamp in us                        |
+| timestamp_fsync   | Timestamp in 16us resolution           |
 | accel[3]          | 3-axis accel raw data                  |
 | gyro[3]           | 3-axis gyro raw data                   |
 | temperature       | Temperature raw data (on 1 or 2 bytes) |
 | accel_high_res[3] | 3- axis accel lsb in high resolution   |
 | gyro_high_res[3]  | 3- axis gyro LSB in high resolution    |
 
+## APEX functions
+
+**int startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler)**
+
+This method starts the tilt detection algorithm.
+The provided *handler* is called when a tilt event is detected.
+Any interuptable pin of the Arduino can be used for *intpin*.
+
+```C++
+void irq_handler(void) {
+  Serial.println("TILT");
+}
+
+// Accel ODR = 50 Hz and APEX Tilt enabled
+IMU.startTiltDetection(2,irq_handler);
+
+```
+
+**int startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)**
+
+This method starts the pedometer algorithm.
+The provided *handler* is called when a pedometer event is detected.
+Any interuptable pin of the Arduino can be used for *intpin*.
+
+```C++
+volatile uint8_t irq_received = 0;
+
+void irq_handler(void) {
+  irq_received = 1;
+}
+
+// Accel ODR = 50 Hz and APEX Pedometer enabled
+IMU.startPedometer(2,irq_handler);
+```
+
+**int getPedometer(uint16_t\& step_count, float\& step_cadence, char&ast;\& activity)**
+
+This method gets the pedometer algorithm output.
+The pedometer algorithm returns the number of steps as *step count*, the number of steps per seconds as the *step cadence* and the walk/run *activity*.
+
+```C++
+uint16_t step_count=0;
+float step_cadence=0;
+char* activity;
+IMU.getPedometer(step_count,step_cadence,activity);
+Serial.print("Step count:");
+Serial.println(step_count);
+Serial.print("Step cadence:");
+Serial.println(step_cadence);
+Serial.print("activity:");
+Serial.println(activity);
+```
+
+**int startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler)**
+
+This method starts the Wake on Motion algorithm.
+The provided *handler* is called when a movement is detected.
+Any interuptable pin of the Arduino can be used for *intpin*.
+
+```C++
+volatile bool wake_up = false;
+
+void irq_handler(void) {
+  wake_up = true;
+}
+
+// APEX WoM enabled, irq on pin 2
+IMU.startWakeOnMotion(2,irq_handler);
+```
 
 # Available Sketches
 
@@ -269,11 +342,40 @@ This sketch initializes the ICM42670P with the SPI interface, and starts logging
 
 **FIFO_Interrupt**
 
-This sketch initializes the ICM42670P with the SPI interface and interrupt PIN2, and starts logging raw sensor data from IMU FIFO. Sensor data can be monitored on Serial monitor or Serial plotter
+This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, and starts logging raw sensor data from IMU FIFO. Sensor data can be monitored on Serial monitor or Serial plotter
 
-**IMU data monitoring**
+**APEX_Tilt**
+
+This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, and starts the APEX Tilt detection. A TILT message is displayed on the Serial monitor when the sensor is tilted for 5 seconds.
+
+**APEX_Pedometer**
+
+This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, and starts the APEX Pedometer. A Pedometer status is displayed on the Serial monitor (for each step after the 5th step).
+
+**APEX_WakeOnMotion**
+
+This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, and starts the APEX Wake on Motion. A Wake-up message is displayed on the Serial monitor when the sensor detects movement.
+
+# IMU data monitoring
 
 When the ICM42670P IMU is logging, the Accelerometer, Gyroscope and Temperature raw data can be monitored with the Arduino Serial Plotter (Tools->Serial Plotter).
 
 ![Serial Plotter](doc/pictures/SerialPlotter.jpg)
 
+# Using a different device interface
+
+When switching from a Sketch using the I2C to another using the SPI (or the opposite), it is required to power off the device.
+
+# Increasing Sensor ODR
+
+Sensor output datarate can be increased by changing first argument of startAccel and startGyro in the sketches.
+It is also required to increase Serial baudrate (using same parameter for Serial monitor) and/or to reduce the number of printed messages.
+When using the I2C interface (@400kHz) and the Serial @2Mbauds, maximum Sensor ODR is 800Hz keeping same amount of messages.
+
+```C++
+// Serial at 2Mbauds
+Serial.begin(2000000);
+// IMU at 800Hz
+IMU.startAccel(800,16);
+IMU.startGyro(800,16);
+```

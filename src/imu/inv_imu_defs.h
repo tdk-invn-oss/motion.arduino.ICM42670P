@@ -1,24 +1,18 @@
 /*
- * ________________________________________________________________________________________________________
- * Copyright (c) 2017 InvenSense Inc. All rights reserved.
  *
- * This software, related documentation and any modifications thereto (collectively "Software") is subject
- * to InvenSense and its licensors' intellectual property rights under U.S. and international copyright
- * and other intellectual property rights laws.
+ * Copyright (c) [2018] by InvenSense, Inc.
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+ * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * InvenSense and its licensors retain all intellectual property and proprietary rights in and to the Software
- * and any use, reproduction, disclosure or distribution of the Software without an express license agreement
- * from InvenSense is strictly prohibited.
- *
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, THE SOFTWARE IS
- * PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
- * TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
- * EXCEPT AS OTHERWISE PROVIDED IN A LICENSE AGREEMENT BETWEEN THE PARTIES, IN NO EVENT SHALL
- * INVENSENSE BE LIABLE FOR ANY DIRECT, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, OR ANY
- * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
- * OF THE SOFTWARE.
- * ________________________________________________________________________________________________________
  */
 
 #ifndef _INV_IMU_DEFS_H_
@@ -28,86 +22,23 @@
 extern "C" {
 #endif
 
-#define ICM42670P
-
 /** @file inv_imu_defs.h
  * File exposing the device register map
  */
 
 #include <stdint.h>
 
-/* List whoami values for all device variants*/
-#define T1000_WHOAMI     0x30
-#define ICM42607P_WHOAMI 0x60
-#define ICM42670P_WHOAMI 0x67
-#define ICM42670T_WHOAMI 0x64
-#define ICM42670S_WHOAMI 0x69
-#define ICM42680_WHOAMI  0x80
-#define ICM42608P_WHOAMI 0x3F
-#define ICM42671P_WHOAMI 0x52
-#define ICM42671S_WHOAMI 0x54
-#define ICM42370P_WHOAMI 0x0D
+#define INV_IMU_REV_A 0xA
+#define INV_IMU_REV_B 0XB
 
-#define ICM_REV_A 0xA
-#define ICM_REV_B 0XB
+/* Include device definition */
+#include "imu/inv_imu.h"
 
-/* Define whoami value for the targeted product and make sure the target is valid */
-#if defined(T1000)
-#define ICM_WHOAMI            T1000_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42607P)
-#define ICM_WHOAMI            ICM42607P_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42670P)
-#define ICM_WHOAMI            ICM42670P_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42670T)
-#define ICM_WHOAMI            ICM42670T_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42670S)
-#define ICM_WHOAMI            ICM42670S_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42680)
-#define ICM_WHOAMI            ICM42680_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42608P)
-#define ICM_WHOAMI            ICM42608P_WHOAMI
-#define ICM_REV               ICM_REV_B
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42671P)
-#define ICM_WHOAMI            ICM42671P_WHOAMI
-#define ICM_REV               ICM_REV_B
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42671S)
-#define ICM_WHOAMI            ICM42671S_WHOAMI
-#define ICM_REV               ICM_REV_B
-#define ICM_IS_GYRO_SUPPORTED 1
-#elif defined(ICM42370P)
-#define ICM_WHOAMI            ICM42370P_WHOAMI
-#define ICM_REV               ICM_REV_A
-#define ICM_IS_GYRO_SUPPORTED 0
-#else
-#error "Please define which IMU variant is targeted."
-#endif
-
-#if ICM_REV == ICM_REV_A
+#if INV_IMU_REV == INV_IMU_REV_A
 #include "imu/inv_imu_regmap_rev_a.h"
-#elif ICM_REV == ICM_REV_B
+#elif INV_IMU_REV == INV_IMU_REV_B
 #include "imu/inv_imu_regmap_rev_b.h"
 #endif
-
-/* ----------------------------------------------------------------------------
- * Device features
- *
- * Next macros define some of the device features such as FIFO, sensor data
- * size or whoami value.
- * ---------------------------------------------------------------------------- */
 
 #define ACCEL_DATA_SIZE 6
 #define GYRO_DATA_SIZE  6
@@ -146,20 +77,20 @@ extern "C" {
 typedef union {
 	unsigned char Byte;
 	struct {
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 		unsigned char gyro_odr_different : 1;
 #else
 		unsigned char reserved1 : 1;
 #endif
 		unsigned char accel_odr_different : 1;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 		unsigned char fsync_bit : 1;
 #else
 		unsigned char reserved2 : 1;
 #endif
 		unsigned char timestamp_bit : 1;
 		unsigned char twentybits_bit : 1;
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 		unsigned char gyro_bit : 1;
 #else
 		unsigned char reserved3 : 1;
@@ -278,7 +209,7 @@ typedef enum {
 	PWR_MGMT0_IDLE_EN  = (0x00 << PWR_MGMT0_IDLE_POS),
 } PWR_MGMT0_IDLE_t;
 
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 /* GYRO_MODE */
 typedef enum {
 	PWR_MGMT0_GYRO_MODE_LN      = (0x03 << PWR_MGMT0_GYRO_MODE_POS),
@@ -295,7 +226,7 @@ typedef enum {
 	PWR_MGMT0_ACCEL_MODE_OFF = 0x00,
 } PWR_MGMT0_ACCEL_MODE_t;
 
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 /*
  * GYRO_CONFIG0
  * Register Name: GYRO_CONFIG0
@@ -353,7 +284,7 @@ typedef enum {
 	ACCEL_CONFIG0_ODR_1600_HZ   = 0x5,
 } ACCEL_CONFIG0_ODR_t;
 
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 /*
  * GYRO_CONFIG1
  * Register Name: GYRO_CONFIG1
@@ -609,7 +540,7 @@ typedef enum {
 	FIFO_CONFIG5_TMST_FSYNC_DIS = (0x0 << FIFO_CONFIG5_FIFO_TMST_FSYNC_EN_POS),
 } FIFO_CONFIG5_TMST_FSYNC_t;
 
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 /* FIFO_GYRO_EN */
 typedef enum {
 	FIFO_CONFIG5_GYRO_EN  = (0x1 << FIFO_CONFIG5_FIFO_GYRO_EN_POS),
@@ -623,7 +554,7 @@ typedef enum {
 	FIFO_CONFIG5_ACCEL_DIS = 0x00,
 } FIFO_CONFIG5_ACCEL_t;
 
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 /*
  * FSYNC_CONFIG_MREG1
  * Register Name: FSYNC_CONFIG
@@ -655,7 +586,7 @@ typedef enum {
 	ST_CONFIG_ACCEL_ST_LIM_50 = (7 << ST_CONFIG_ACCEL_ST_LIM_POS),
 } ST_CONFIG_ACCEL_ST_LIM_t;
 
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 typedef enum {
 	ST_CONFIG_GYRO_ST_LIM_50 = (7 << ST_CONFIG_GYRO_ST_LIM_POS),
 } ST_CONFIG_GYRO_ST_LIM_t;
@@ -670,7 +601,7 @@ typedef enum {
 typedef enum {
 	SELFTEST_DIS      = 0,
 	SELFTEST_ACCEL_EN = SELFTEST_ACCEL_ST_EN_MASK,
-#if ICM_IS_GYRO_SUPPORTED
+#if INV_IMU_IS_GYRO_SUPPORTED
 	SELFTEST_GYRO_EN = SELFTEST_GYRO_ST_EN_MASK,
 	SELFTEST_EN      = (SELFTEST_ACCEL_ST_EN_MASK | SELFTEST_GYRO_ST_EN_MASK)
 #endif
