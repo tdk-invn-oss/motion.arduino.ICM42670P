@@ -320,7 +320,7 @@ static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32
 
 static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
   ICM42670P* obj = (ICM42670P*)serif->context;
-  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
+  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE0));
   digitalWrite(obj->spi_cs,LOW);
   obj->spi->transfer(reg);
   for(uint8_t i = 0; i < wlen; i++) {
@@ -333,7 +333,7 @@ static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer,
 
 static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
   ICM42670P* obj = (ICM42670P*)serif->context;
-  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE1));
+  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE0));
   digitalWrite(obj->spi_cs,LOW);
   obj->spi->transfer(reg | SPI_READ);
   obj->spi->transfer(rbuffer,rlen);
