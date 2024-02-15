@@ -49,7 +49,7 @@ void loop() {
   if(irq_received) {
     uint32_t step_count=0;
     float step_cadence=0;
-    char* activity;
+    const char* activity;
     irq_received = 0;
     IMU.getPedometer(step_count,step_cadence,activity);
     Serial.print("Step count:");
