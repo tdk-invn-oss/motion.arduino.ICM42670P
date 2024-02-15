@@ -47,7 +47,7 @@ class ICM42670P {
     bool isGyroDataValid(inv_imu_sensor_event_t *evt);
     int startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler);
     int startPedometer(uint8_t intpin, ICM42670P_irq_handler handler);
-    int getPedometer(uint32_t& step_count, float& step_cadence, char*& activity);
+    int getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity);
     int startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler);
 
     uint8_t i2c_address;
