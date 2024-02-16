@@ -25,7 +25,7 @@ static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer,
 static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen);
 static void event_cb(inv_imu_sensor_event_t *event);
 
-static char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
+static const char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
 
 // i2c
 #define ICM42670P_I2C_SPEED 400000
@@ -205,6 +205,7 @@ int ICM42670P::startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler)
   int rc = 0;
   rc |= initApex(intpin,handler);
   rc |= inv_imu_apex_enable_tilt(&icm_driver);
+  return rc;
 }
 
 int ICM42670P::startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)
@@ -213,9 +214,10 @@ int ICM42670P::startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)
   step_cnt_ovflw = 0;
   rc |= initApex(intpin,handler);
   rc |= inv_imu_apex_enable_pedometer(&icm_driver);
+  return rc;
 }
 
-int ICM42670P::getPedometer(uint32_t& step_count, float& step_cadence, char*& activity)
+int ICM42670P::getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity)
 {
   int rc = 0;
   uint8_t  int_status3;

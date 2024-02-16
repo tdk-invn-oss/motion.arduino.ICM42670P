@@ -295,7 +295,7 @@ void irq_handler(void) {
 IMU.startPedometer(2,irq_handler);
 ```
 
-**int getPedometer(uint16_t\& step_count, float\& step_cadence, char&ast;\& activity)**
+**int getPedometer(uint16_t\& step_count, float\& step_cadence, const char&ast;\& activity)**
 
 This method gets the pedometer algorithm output.
 The pedometer algorithm returns the number of steps as *step count*, the number of steps per seconds as the *step cadence* and the walk/run *activity*.
@@ -303,7 +303,7 @@ The pedometer algorithm returns the number of steps as *step count*, the number 
 ```C++
 uint16_t step_count=0;
 float step_cadence=0;
-char* activity;
+const char* activity;
 IMU.getPedometer(step_count,step_cadence,activity);
 Serial.print("Step count:");
 Serial.println(step_count);
