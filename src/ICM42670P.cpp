@@ -28,11 +28,13 @@ static void event_cb(inv_imu_sensor_event_t *event);
 static const char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
 
 // i2c
-#define ICM42670P_I2C_SPEED 400000
+#define I2C_DEFAULT_CLOCK 400000
+#define I2C_MAX_CLOCK 1000000
 #define ICM42670P_I2C_ADDRESS 0x68
 // spi
 #define SPI_READ 0x80
-#define SPI_CLOCK 16000000
+#define SPI_DEFAULT_CLOCK 6000000
+#define SPI_MAX_CLOCK 24000000
 // WOM threshold in mg
 #define WOM_THRESHOLD 50 /* = 50 * 1000 / 256 = 195 mg */
 // This is used by the event callback (not object aware), declared static
@@ -42,21 +44,53 @@ static inv_imu_sensor_event_t* event;
 static struct inv_imu_device *icm_driver_ptr = NULL;
 
 // ICM42670P constructor for I2c interface
+ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb, uint32_t freq) {
+  i2c = &i2c_ref; 
+  i2c_address = ICM42670P_I2C_ADDRESS | (lsb ? 0x1 : 0);
+  use_spi = false;
+  spi = NULL;
+  spi_cs = 0;
+  if ((freq <= I2C_MAX_CLOCK) && (freq >= 100000))
+  {
+    clk_freq = freq;
+  } else {
+    clk_freq = I2C_DEFAULT_CLOCK;
+  }
+}
+
+// ICM42670P constructor for i2c interface, default frequency
 ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb) {
   i2c = &i2c_ref; 
   i2c_address = ICM42670P_I2C_ADDRESS | (lsb ? 0x1 : 0);
   use_spi = false;
   spi = NULL;
   spi_cs = 0;
+  clk_freq = I2C_DEFAULT_CLOCK;
 }
 
 // ICM42670P constructor for spi interface
+ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id, uint32_t freq) {
+  spi = &spi_ref;
+  spi_cs = cs_id; 
+  use_spi = true;
+  i2c = NULL;
+  i2c_address = 0;
+  if ((freq <= SPI_MAX_CLOCK) && (freq >= 100000))
+  {
+    clk_freq = freq;
+  } else {
+    clk_freq = SPI_DEFAULT_CLOCK;
+  }
+}
+
+// ICM42670P constructor for spi interface, default frequency
 ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id) {
   spi = &spi_ref;
   spi_cs = cs_id; 
   use_spi = true;
   i2c = NULL;
   i2c_address = 0;
+  clk_freq = SPI_DEFAULT_CLOCK;
 }
 
 /* starts communication with the ICM42670P */
@@ -67,7 +101,7 @@ int ICM42670P::begin() {
 
   if (i2c != NULL) {
     i2c->begin();
-    i2c->setClock(ICM42670P_I2C_SPEED);
+    i2c->setClock(clk_freq);
     icm_serif.serif_type = UI_I2C;
     icm_serif.read_reg  = i2c_read;
     icm_serif.write_reg = i2c_write;
@@ -322,7 +356,7 @@ static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32
 
 static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
   ICM42670P* obj = (ICM42670P*)serif->context;
-  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE0));
+  obj->spi->beginTransaction(SPISettings(obj->clk_freq, MSBFIRST, SPI_MODE3));
   digitalWrite(obj->spi_cs,LOW);
   obj->spi->transfer(reg);
   for(uint8_t i = 0; i < wlen; i++) {
@@ -335,7 +369,7 @@ static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer,
 
 static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
   ICM42670P* obj = (ICM42670P*)serif->context;
-  obj->spi->beginTransaction(SPISettings(SPI_CLOCK, MSBFIRST, SPI_MODE0));
+  obj->spi->beginTransaction(SPISettings(obj->clk_freq, MSBFIRST, SPI_MODE3));
   digitalWrite(obj->spi_cs,LOW);
   obj->spi->transfer(reg | SPI_READ);
   obj->spi->transfer(rbuffer,rlen);

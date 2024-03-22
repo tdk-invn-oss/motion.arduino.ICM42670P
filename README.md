@@ -94,17 +94,37 @@ figure.
 ## Create ICM42670P instance
 
 **ICM42670P(TwoWire &i2c,bool lsb)**
-Create an instance of the ICM42670P that will be accessed using the specified I2C. The LSB of the I2C address can be set to 0 or 1.
+
+Create an instance of the ICM42670P that will be accessed using the specified I2C. The LSB of the I2C address can be set to 0 or 1.  
+I2C default clock is 400kHz.
 
 ```C++
 ICM42670P IMU(Wire,0);
 ```
 
-**ICM42670P(SPIClass &spi,uint8_t cs_id)**
-Create an instance of the ICM42670P that will be accessed using the specified SPI. The IO number to be used as chip select must be specified.
+**ICM42670P(TwoWire &i2c,bool lsb, uint32_t freq)**
+
+Same as above, specifying the I2C clock frequency (must be between 100kHz and 1MHz)
 
 ```C++
-ICM42670P IMU(SPI,10);
+ICM42670P IMU(Wire,0,1000000);
+```
+
+**ICM42670P(SPIClass &spi,uint8_t cs_id)**
+
+Create an instance of the ICM42670P that will be accessed using the specified SPI. The IO number to be used as chip select must be specified.  
+SPI default clock is 6MHz.
+
+```C++
+ICM42670P IMU(SPI,8);
+```
+
+**ICM42670P(SPIClass &spi,uint8_t cs_id, uint32_t freq)**
+
+Same as above, specifying the SPI clock frequency (must be between 100kHz and 24MHz)
+
+```C++
+ICM42670P IMU(SPI,8,12000000);
 ```
 
 **/!\ This library does NOT support multiple instances of ICM42670P.**

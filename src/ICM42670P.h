@@ -35,7 +35,9 @@ typedef void (*ICM42670P_irq_handler)(void);
 class ICM42670P {
   public:
     ICM42670P(TwoWire &i2c,bool address_lsb);
+    ICM42670P(TwoWire &i2c,bool lsb, uint32_t freq);
     ICM42670P(SPIClass &spi,uint8_t chip_select_id);
+    ICM42670P(SPIClass &spi,uint8_t cs_id, uint32_t freq);
     int begin();
     int startAccel(uint16_t odr, uint16_t fsr);
     int startGyro(uint16_t odr, uint16_t fsr);
@@ -53,6 +55,7 @@ class ICM42670P {
     TwoWire *i2c;
     uint8_t spi_cs;
     SPIClass *spi;
+    uint32_t clk_freq;
   protected:
     struct inv_imu_device icm_driver;
     bool use_spi;
