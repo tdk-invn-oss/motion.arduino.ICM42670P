@@ -9,9 +9,6 @@ This library supports both I2C and SPI commmunication with the ICM42670P.
 Use Arduino Library manager to find and install the ICM42670P library.
 
 # Hardware setup
-There is currenlty no Arduino shield for the ICM42670P.
-The wiring must be done manually between the Arduino motherboard and the ICM42670P daughter board or the ICM42670P eval board.
-The below wiring descriptions are given for an Arduino Zero board, it depends on the interface to be used: I2C or SPI.
 
 ## Arduino Zero connection with  ICM42670P Daughter board
 
@@ -126,9 +123,6 @@ Same as above, specifying the SPI clock frequency (must be between 100kHz and 24
 ```C++
 ICM42670P IMU(SPI,8,12000000);
 ```
-
-**/!\ This library does NOT support multiple instances of ICM42670P.**
-
 
 ## Initialize the ICM42670P
 Call the begin method to execute the ICM42670P initialization routine. 
@@ -287,6 +281,7 @@ This structure is used by the ICM42670P driver to return raw sensor data. Availa
 This method starts the tilt detection algorithm.
 The provided *handler* is called when a tilt event is detected.
 Any interuptable pin of the Arduino can be used for *intpin*.
+Parameters are optionals: if *handler* and *intpin* are omitted, no handler will be registered.
 
 ```C++
 void irq_handler(void) {
@@ -298,11 +293,24 @@ IMU.startTiltDetection(2,irq_handler);
 
 ```
 
+**bool getTilt(void)**
+
+This method gets the Tilt detection algorithm status.
+It returns true if a Tilt was detected since last call to this function.
+
+```C++
+if(IMU.getTilt())
+{
+  Serial.println("Tilt");
+}
+```
+
 **int startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)**
 
 This method starts the pedometer algorithm.
 The provided *handler* is called when a pedometer event is detected.
 Any interuptable pin of the Arduino can be used for *intpin*.
+Parameters are optionals: if *handler* and *intpin* are omitted, no handler will be registered.
 
 ```C++
 volatile uint8_t irq_received = 0;
@@ -350,6 +358,21 @@ void irq_handler(void) {
 IMU.startWakeOnMotion(2,irq_handler);
 ```
 
+**int enableInterrupt(uint8_t intpin, ICM42670P_irq_handler handler)**
+
+This method registers an interrupt for the IMU.
+The provided *handler* is called when an interrupt occurs.
+Any interuptable pin of the Arduino can be used for *intpin*.
+
+```C++
+// Pedometer enabled
+IMU.startPedometer();
+// Tilt enabled
+IMU.startTiltDetection();
+// Enable interrupt
+IMU.enableInterrupt(2, irq_handler);
+```
+
 # Available Sketches
 
 **Polling_I2C**
@@ -371,6 +394,10 @@ This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2,
 **APEX_Pedometer**
 
 This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, and starts the APEX Pedometer. A Pedometer status is displayed on the Serial monitor (for each step after the 5th step).
+
+**APEX_PedometerAndTilt**
+
+This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, and starts the APEX Pedometer and Tilt. Pedometer and Tilt status are displayed on the Serial monitor.
 
 **APEX_WakeOnMotion**
 

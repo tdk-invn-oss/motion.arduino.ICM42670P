@@ -46,16 +46,20 @@ class ICM42670P {
     int getDataFromFifo(ICM42670P_sensor_event_cb event_cb);
     bool isAccelDataValid(inv_imu_sensor_event_t *evt);
     bool isGyroDataValid(inv_imu_sensor_event_t *evt);
-    int startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler);
-    int startPedometer(uint8_t intpin, ICM42670P_irq_handler handler);
+    int startTiltDetection(uint8_t intpin=2, ICM42670P_irq_handler handler=NULL);
+    bool getTilt(void);
+    int startPedometer(uint8_t intpin=2, ICM42670P_irq_handler handler=NULL);
     int getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity);
     int startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler);
+    int updateApex(void);
+    void enableInterrupt(uint8_t intpin, ICM42670P_irq_handler handler);
 
     uint8_t i2c_address;
     TwoWire *i2c;
     uint8_t spi_cs;
     SPIClass *spi;
     uint32_t clk_freq;
+    uint8_t int_status3;
   protected:
     struct inv_imu_device icm_driver;
     bool use_spi;
@@ -65,6 +69,8 @@ class ICM42670P {
     GYRO_CONFIG0_FS_SEL_t gyro_fsr_dps_to_param(uint16_t gyro_fsr_dps);
     int initApex(uint8_t intpin, ICM42670P_irq_handler handler);
     uint32_t step_cnt_ovflw;
+    bool apex_tilt_enable;
+    bool apex_pedometer_enable;
 };
 
 #endif // ICM42670P_H

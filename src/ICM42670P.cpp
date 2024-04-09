@@ -40,9 +40,6 @@ static const char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
 // This is used by the event callback (not object aware), declared static
 static inv_imu_sensor_event_t* event;
 
-// This is used by the getDataFromFifo callback (not object aware), declared static
-static struct inv_imu_device *icm_driver_ptr = NULL;
-
 // ICM42670P constructor for I2c interface
 ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb, uint32_t freq) {
   i2c = &i2c_ref; 
@@ -131,6 +128,10 @@ int ICM42670P::begin() {
   if (who_am_i != INV_IMU_WHOAMI) {
     return -3;
   }
+  
+  /* All APEX off */
+  apex_tilt_enable = false;
+  apex_pedometer_enable = false;
 
   // successful init, return 0
   return 0;
@@ -158,6 +159,16 @@ int ICM42670P::getDataFromRegisters(inv_imu_sensor_event_t& evt) {
   return inv_imu_get_data_from_registers(&icm_driver);
 }
 
+
+void ICM42670P::enableInterrupt(uint8_t intpin, ICM42670P_irq_handler handler)
+{
+  if(handler != NULL)
+  {
+    pinMode(intpin,INPUT);
+    attachInterrupt(intpin,handler,RISING);
+  }
+}
+
 int ICM42670P::enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark) {
   int rc = 0;
   uint8_t data;
@@ -166,7 +177,7 @@ int ICM42670P::enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler
     return -1;
   }
   pinMode(intpin,INPUT);
-  attachInterrupt(intpin,handler,RISING);
+  enableInterrupt(intpin,handler);
   rc |= inv_imu_configure_fifo(&icm_driver,INV_IMU_FIFO_ENABLED);
   rc |= inv_imu_write_reg(&icm_driver, FIFO_CONFIG2, 1, &fifo_watermark);
   // Set fifo_wm_int_w generating condition : fifo_wm_int_w generated when counter == threshold
@@ -228,43 +239,78 @@ int ICM42670P::initApex(uint8_t intpin, ICM42670P_irq_handler handler)
   apex_inputs.power_save =APEX_CONFIG0_DMP_POWER_SAVE_DIS;
   rc |= inv_imu_apex_configure_parameters(&icm_driver, &apex_inputs);
 
-  pinMode(intpin,INPUT);
-  attachInterrupt(intpin,handler,RISING);
+  enableInterrupt(intpin,handler);
 
+  if(apex_tilt_enable)
+    rc |= inv_imu_apex_enable_tilt(&icm_driver);
+  if(apex_pedometer_enable)
+    rc |= inv_imu_apex_enable_pedometer(&icm_driver);
+
+  return rc;
+}
+
+int ICM42670P::updateApex(void)
+{
+  int rc = 0;
+  uint8_t data;
+  rc = inv_imu_read_reg(&icm_driver, INT_STATUS3, 1, &data );
+  if (rc == 0)
+  {
+    /* Update interrupt status */
+    int_status3 |= data;
+  }
   return rc;
 }
 
 int ICM42670P::startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler)
 {
   int rc = 0;
+  apex_tilt_enable = true;
   rc |= initApex(intpin,handler);
-  rc |= inv_imu_apex_enable_tilt(&icm_driver);
   return rc;
+}
+
+bool ICM42670P::getTilt(void)
+{
+  updateApex();
+  if (int_status3 & INT_STATUS3_TILT_DET_INT_MASK)
+  {
+    /* Reset tilt internal status */
+    int_status3 &= ~INT_STATUS3_TILT_DET_INT_MASK;
+    return true;
+  }
+  return false;
 }
 
 int ICM42670P::startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)
 {
   int rc = 0;
   step_cnt_ovflw = 0;
+  apex_pedometer_enable = true;
   rc |= initApex(intpin,handler);
-  rc |= inv_imu_apex_enable_pedometer(&icm_driver);
   return rc;
 }
 
 int ICM42670P::getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity)
 {
   int rc = 0;
-  uint8_t  int_status3;
   
   /* Read APEX interrupt status */
-  rc |= inv_imu_read_reg(&icm_driver, INT_STATUS3, 1, &int_status3);
+  rc |= updateApex();
 
   if (int_status3 & INT_STATUS3_STEP_CNT_OVF_INT_MASK)
+  {
     step_cnt_ovflw++;
+    /* Reset pedometer overflow internal status */
+    int_status3 &= ~INT_STATUS3_STEP_CNT_OVF_INT_MASK;
+  }
 
   if (int_status3 & (INT_STATUS3_STEP_DET_INT_MASK)) {
     inv_imu_apex_step_activity_t apex_data0;
     float nb_samples           = 0;
+
+    /* Reset pedometer internal status */
+    int_status3 &= ~INT_STATUS3_STEP_DET_INT_MASK;
 
     rc |= inv_imu_apex_get_data_activity(&icm_driver, &apex_data0);
     // to do: detect step counter overflow?
@@ -304,6 +350,9 @@ int ICM42670P::startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler)
   /* Disable Pedometer before configuring it */
   rc |= inv_imu_apex_disable_pedometer(&icm_driver);
   rc |= inv_imu_apex_disable_tilt(&icm_driver);
+
+  apex_tilt_enable = false;
+  apex_pedometer_enable = false;
 
   pinMode(intpin,INPUT);
   attachInterrupt(intpin,handler,RISING);
