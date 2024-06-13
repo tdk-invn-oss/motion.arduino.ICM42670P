@@ -16,18 +16,18 @@
  */
 #include "ICM42670P.h"
 
-// Instantiate an ICM42670P with SPI interface and CS on pin 8
-ICM42670P IMU(SPI,8);
+// Instantiate an ICM42670 with SPI interface and CS on pin 8
+ICM42670 IMU(SPI,8);
 
 void setup() {
   int ret;
   Serial.begin(115200);
   while(!Serial) {}
 
-  // Initializing the ICM42670P
+  // Initializing the ICM42670
   ret = IMU.begin();
   if (ret != 0) {
-    Serial.print("ICM42670P initialization failed: ");
+    Serial.print("ICM42670 initialization failed: ");
     Serial.println(ret);
     while(1);
   }

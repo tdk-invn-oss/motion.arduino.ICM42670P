@@ -2,7 +2,7 @@
 
 # ICM42670P Arduino library
 This arduino library is for the [TDK/Invensense ICM42670P High Performance 6-Axis MotionTracking<sup>(TM)</sup> IMU](https://invensense.tdk.com/products/motion-tracking/6-axis/icm-42670-p).
-The ICM-42670-P is a high performance 6-axis MEMS MotionTracking device that combines a 3-axis gyroscope and a 3-axis accelerometer. It has a configurable host interface that supports I3C<sup>SM</sup>, I2C, and SPI serial communication, features up to 2.25 Kbytes FIFO and 2 programmable interrupts with ultra-low-power wake-on-motion support to minimize system power consumption.
+The ICM42670P is a high performance 6-axis MEMS MotionTracking device that combines a 3-axis gyroscope and a 3-axis accelerometer. It has a configurable host interface that supports I3C<sup>SM</sup>, I2C, and SPI serial communication, features up to 2.25 Kbytes FIFO and 2 programmable interrupts with ultra-low-power wake-on-motion support to minimize system power consumption.
 This library supports both I2C and SPI commmunication with the ICM42670P.
 
 # Software setup
@@ -426,3 +426,8 @@ Serial.begin(2000000);
 IMU.startAccel(800,16);
 IMU.startGyro(800,16);
 ```
+# Additionnal Sketches
+
+**MicroROS_Publisher**
+
+This sketch initializes the ICM42670P with the I2C interface and interrupt PIN2, initializes also microROS Arduino environment and starts logging raw sensor data from IMU FIFO. Sensor data are published in IMU structure. For more information, refer to MicroROS_README.md.

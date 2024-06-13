@@ -30,7 +30,8 @@ static const char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
 // i2c
 #define I2C_DEFAULT_CLOCK 400000
 #define I2C_MAX_CLOCK 1000000
-#define ICM42670P_I2C_ADDRESS 0x68
+#define ICM42670_I2C_ADDRESS 0x68
+#define ARDUINO_I2C_BUFFER_LENGTH 32
 // spi
 #define SPI_READ 0x80
 #define SPI_DEFAULT_CLOCK 6000000
@@ -40,10 +41,10 @@ static const char* APEX_ACTIVITY[3] = {"IDLE","WALK","RUN"};
 // This is used by the event callback (not object aware), declared static
 static inv_imu_sensor_event_t* event;
 
-// ICM42670P constructor for I2c interface
-ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb, uint32_t freq) {
+// ICM42670 constructor for I2c interface
+ICM42670::ICM42670(TwoWire &i2c_ref,bool lsb, uint32_t freq) {
   i2c = &i2c_ref; 
-  i2c_address = ICM42670P_I2C_ADDRESS | (lsb ? 0x1 : 0);
+  i2c_address = ICM42670_I2C_ADDRESS | (lsb ? 0x1 : 0);
   use_spi = false;
   spi = NULL;
   spi_cs = 0;
@@ -55,18 +56,18 @@ ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb, uint32_t freq) {
   }
 }
 
-// ICM42670P constructor for i2c interface, default frequency
-ICM42670P::ICM42670P(TwoWire &i2c_ref,bool lsb) {
+// ICM42670 constructor for i2c interface, default frequency
+ICM42670::ICM42670(TwoWire &i2c_ref,bool lsb) {
   i2c = &i2c_ref; 
-  i2c_address = ICM42670P_I2C_ADDRESS | (lsb ? 0x1 : 0);
+  i2c_address = ICM42670_I2C_ADDRESS | (lsb ? 0x1 : 0);
   use_spi = false;
   spi = NULL;
   spi_cs = 0;
   clk_freq = I2C_DEFAULT_CLOCK;
 }
 
-// ICM42670P constructor for spi interface
-ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id, uint32_t freq) {
+// ICM42670 constructor for spi interface
+ICM42670::ICM42670(SPIClass &spi_ref,uint8_t cs_id, uint32_t freq) {
   spi = &spi_ref;
   spi_cs = cs_id; 
   use_spi = true;
@@ -80,8 +81,8 @@ ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id, uint32_t freq) {
   }
 }
 
-// ICM42670P constructor for spi interface, default frequency
-ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id) {
+// ICM42670 constructor for spi interface, default frequency
+ICM42670::ICM42670(SPIClass &spi_ref,uint8_t cs_id) {
   spi = &spi_ref;
   spi_cs = cs_id; 
   use_spi = true;
@@ -90,8 +91,8 @@ ICM42670P::ICM42670P(SPIClass &spi_ref,uint8_t cs_id) {
   clk_freq = SPI_DEFAULT_CLOCK;
 }
 
-/* starts communication with the ICM42670P */
-int ICM42670P::begin() {
+/* starts communication with the ICM42670 */
+int ICM42670::begin() {
   struct inv_imu_serif icm_serif;
   int rc = 0;
   uint8_t who_am_i;
@@ -112,8 +113,8 @@ int ICM42670P::begin() {
   }
   /* Initialize serial interface between MCU and Icm43xxx */
   icm_serif.context   = (void*)this;
-  icm_serif.max_read  = 2048; /* maximum number of bytes allowed per serial read */
-  icm_serif.max_write = 2048; /* maximum number of bytes allowed per serial write */
+  icm_serif.max_read  = 2560; /* maximum number of bytes allowed per serial read */
+  icm_serif.max_write = 2560; /* maximum number of bytes allowed per serial write */
   rc = inv_imu_init(&icm_driver, &icm_serif, NULL);
   if (rc != INV_ERROR_SUCCESS) {
     return rc;
@@ -137,7 +138,7 @@ int ICM42670P::begin() {
   return 0;
 }
 
-int ICM42670P::startAccel(uint16_t odr, uint16_t fsr) {
+int ICM42670::startAccel(uint16_t odr, uint16_t fsr) {
   int rc = 0;
   rc |= inv_imu_set_accel_fsr(&icm_driver, accel_fsr_g_to_param(fsr));
   rc |= inv_imu_set_accel_frequency(&icm_driver, accel_freq_to_param(odr));
@@ -145,7 +146,7 @@ int ICM42670P::startAccel(uint16_t odr, uint16_t fsr) {
   return rc;
 }
 
-int ICM42670P::startGyro(uint16_t odr, uint16_t fsr) {
+int ICM42670::startGyro(uint16_t odr, uint16_t fsr) {
   int rc = 0;
   rc |= inv_imu_set_gyro_fsr(&icm_driver, gyro_fsr_dps_to_param(fsr));
   rc |= inv_imu_set_gyro_frequency(&icm_driver, gyro_freq_to_param(odr));
@@ -153,14 +154,14 @@ int ICM42670P::startGyro(uint16_t odr, uint16_t fsr) {
   return rc;
 }
 
-int ICM42670P::getDataFromRegisters(inv_imu_sensor_event_t& evt) {
+int ICM42670::getDataFromRegisters(inv_imu_sensor_event_t& evt) {
   // Set event buffer to be used by the callback
   event = &evt;
   return inv_imu_get_data_from_registers(&icm_driver);
 }
 
 
-void ICM42670P::enableInterrupt(uint8_t intpin, ICM42670P_irq_handler handler)
+void ICM42670::enableInterrupt(uint8_t intpin, ICM42670_irq_handler handler)
 {
   if(handler != NULL)
   {
@@ -169,7 +170,7 @@ void ICM42670P::enableInterrupt(uint8_t intpin, ICM42670P_irq_handler handler)
   }
 }
 
-int ICM42670P::enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark) {
+int ICM42670::enableFifoInterrupt(uint8_t intpin, ICM42670_irq_handler handler, uint8_t fifo_watermark) {
   int rc = 0;
   uint8_t data;
 
@@ -190,7 +191,7 @@ int ICM42670P::enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler
   return rc;
 }
 
-int ICM42670P::getDataFromFifo(ICM42670P_sensor_event_cb event_cb) {
+int ICM42670::getDataFromFifo(ICM42670_sensor_event_cb event_cb) {
   if(event_cb == NULL) {
     return -1;
   }
@@ -198,15 +199,15 @@ int ICM42670P::getDataFromFifo(ICM42670P_sensor_event_cb event_cb) {
   return inv_imu_get_data_from_fifo(&icm_driver);
 }
 
-bool ICM42670P::isAccelDataValid(inv_imu_sensor_event_t *evt) {
+bool ICM42670::isAccelDataValid(inv_imu_sensor_event_t *evt) {
   return (evt->sensor_mask & (1<<INV_SENSOR_ACCEL));
 }
 
-bool ICM42670P::isGyroDataValid(inv_imu_sensor_event_t *evt) {
+bool ICM42670::isGyroDataValid(inv_imu_sensor_event_t *evt) {
   return (evt->sensor_mask & (1<<INV_SENSOR_GYRO));
 }
 
-int ICM42670P::initApex(uint8_t intpin, ICM42670P_irq_handler handler)
+int ICM42670::initApex(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int                       rc = 0;
   inv_imu_apex_parameters_t apex_inputs;
@@ -249,7 +250,7 @@ int ICM42670P::initApex(uint8_t intpin, ICM42670P_irq_handler handler)
   return rc;
 }
 
-int ICM42670P::updateApex(void)
+int ICM42670::updateApex(void)
 {
   int rc = 0;
   uint8_t data;
@@ -262,7 +263,7 @@ int ICM42670P::updateApex(void)
   return rc;
 }
 
-int ICM42670P::startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler)
+int ICM42670::startTiltDetection(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int rc = 0;
   apex_tilt_enable = true;
@@ -270,7 +271,7 @@ int ICM42670P::startTiltDetection(uint8_t intpin, ICM42670P_irq_handler handler)
   return rc;
 }
 
-bool ICM42670P::getTilt(void)
+bool ICM42670::getTilt(void)
 {
   updateApex();
   if (int_status3 & INT_STATUS3_TILT_DET_INT_MASK)
@@ -282,7 +283,7 @@ bool ICM42670P::getTilt(void)
   return false;
 }
 
-int ICM42670P::startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)
+int ICM42670::startPedometer(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int rc = 0;
   step_cnt_ovflw = 0;
@@ -291,7 +292,7 @@ int ICM42670P::startPedometer(uint8_t intpin, ICM42670P_irq_handler handler)
   return rc;
 }
 
-int ICM42670P::getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity)
+int ICM42670::getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity)
 {
   int rc = 0;
   
@@ -332,7 +333,7 @@ int ICM42670P::getPedometer(uint32_t& step_count, float& step_cadence, const cha
   return rc;
 }
 
-int ICM42670P::startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler)
+int ICM42670::startWakeOnMotion(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int rc = 0;
   inv_imu_apex_parameters_t apex_inputs;
@@ -375,7 +376,7 @@ int ICM42670P::startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler)
 }
 
 static int i2c_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
-  ICM42670P* obj = (ICM42670P*)serif->context;
+  ICM42670* obj = (ICM42670*)serif->context;
   obj->i2c->beginTransmission(obj->i2c_address);
   obj->i2c->write(reg);
   for(uint8_t i = 0; i < wlen; i++) {
@@ -386,17 +387,31 @@ static int i2c_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer,
 }
 
 static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
-  ICM42670P* obj = (ICM42670P*)serif->context;
-  uint16_t rx_bytes = 0;
+  ICM42670* obj = (ICM42670*)serif->context;
+  uint16_t offset = 0;
 
   obj->i2c->beginTransmission(obj->i2c_address);
   obj->i2c->write(reg);
   obj->i2c->endTransmission(false);
-  rx_bytes = obj->i2c->requestFrom(obj->i2c_address, rlen);
-  if (rlen == rx_bytes) {
-    for(uint8_t i = 0; i < rx_bytes; i++) {
-      rbuffer[i] = obj->i2c->read();
+  while(offset < rlen)
+  {
+    uint16_t rx_bytes = 0;
+    if(offset != 0)
+      obj->i2c->beginTransmission(obj->i2c_address);
+    uint16_t length = ((rlen - offset) > ARDUINO_I2C_BUFFER_LENGTH) ? ARDUINO_I2C_BUFFER_LENGTH : (rlen - offset) ;
+    rx_bytes = obj->i2c->requestFrom(obj->i2c_address, length);
+    if (rx_bytes == length) {
+      for(uint8_t i = 0; i < length; i++) {
+        rbuffer[offset+i] = obj->i2c->read();
+      }
+      offset += length;
+      obj->i2c->endTransmission((offset == rlen));
+    } else {
+      obj->i2c->endTransmission((offset == rlen));
     }
+  }
+  if(offset == rlen)
+  {
     return 0;
   } else {
     return -1;
@@ -404,7 +419,7 @@ static int i2c_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32
 }
 
 static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer, uint32_t wlen) {
-  ICM42670P* obj = (ICM42670P*)serif->context;
+  ICM42670* obj = (ICM42670*)serif->context;
   obj->spi->beginTransaction(SPISettings(obj->clk_freq, MSBFIRST, SPI_MODE3));
   digitalWrite(obj->spi_cs,LOW);
   obj->spi->transfer(reg);
@@ -417,7 +432,7 @@ static int spi_write(inv_imu_serif* serif, uint8_t reg, const uint8_t * wbuffer,
 }
 
 static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32_t rlen) {
-  ICM42670P* obj = (ICM42670P*)serif->context;
+  ICM42670* obj = (ICM42670*)serif->context;
   obj->spi->beginTransaction(SPISettings(obj->clk_freq, MSBFIRST, SPI_MODE3));
   digitalWrite(obj->spi_cs,LOW);
   obj->spi->transfer(reg | SPI_READ);
@@ -427,7 +442,7 @@ static int spi_read(inv_imu_serif* serif, uint8_t reg, uint8_t * rbuffer, uint32
   return 0;
 }
 
-ACCEL_CONFIG0_FS_SEL_t ICM42670P::accel_fsr_g_to_param(uint16_t accel_fsr_g) {
+ACCEL_CONFIG0_FS_SEL_t ICM42670::accel_fsr_g_to_param(uint16_t accel_fsr_g) {
   ACCEL_CONFIG0_FS_SEL_t ret = ACCEL_CONFIG0_FS_SEL_16g;
 
   switch(accel_fsr_g) {
@@ -442,7 +457,7 @@ ACCEL_CONFIG0_FS_SEL_t ICM42670P::accel_fsr_g_to_param(uint16_t accel_fsr_g) {
   return ret;
 }
 
-GYRO_CONFIG0_FS_SEL_t ICM42670P::gyro_fsr_dps_to_param(uint16_t gyro_fsr_dps) {
+GYRO_CONFIG0_FS_SEL_t ICM42670::gyro_fsr_dps_to_param(uint16_t gyro_fsr_dps) {
   GYRO_CONFIG0_FS_SEL_t ret = GYRO_CONFIG0_FS_SEL_2000dps;
 
   switch(gyro_fsr_dps) {
@@ -457,7 +472,7 @@ GYRO_CONFIG0_FS_SEL_t ICM42670P::gyro_fsr_dps_to_param(uint16_t gyro_fsr_dps) {
   return ret;
 }
 
-ACCEL_CONFIG0_ODR_t ICM42670P::accel_freq_to_param(uint16_t accel_freq_hz) {
+ACCEL_CONFIG0_ODR_t ICM42670::accel_freq_to_param(uint16_t accel_freq_hz) {
   ACCEL_CONFIG0_ODR_t ret = ACCEL_CONFIG0_ODR_100_HZ;
 
   switch(accel_freq_hz) {
@@ -476,7 +491,7 @@ ACCEL_CONFIG0_ODR_t ICM42670P::accel_freq_to_param(uint16_t accel_freq_hz) {
   return ret;
 }
 
-GYRO_CONFIG0_ODR_t ICM42670P::gyro_freq_to_param(uint16_t gyro_freq_hz) {
+GYRO_CONFIG0_ODR_t ICM42670::gyro_freq_to_param(uint16_t gyro_freq_hz) {
   GYRO_CONFIG0_ODR_t ret = GYRO_CONFIG0_ODR_100_HZ;
 
   switch(gyro_freq_hz) {

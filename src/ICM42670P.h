@@ -15,8 +15,8 @@
  *
  */
  
-#ifndef ICM42670P_H
-#define ICM42670P_H
+#ifndef ICM42670_H
+#define ICM42670_H
 
 #include "Arduino.h"
 #include "SPI.h"
@@ -24,35 +24,35 @@
 
 extern "C" {
 #include "imu/inv_imu_driver.h"
-#undef ICM42670P
+#undef ICM42670
 }
 
 // This defines the handler called when retrieving a sample from the FIFO
-typedef void (*ICM42670P_sensor_event_cb)(inv_imu_sensor_event_t *event);
+typedef void (*ICM42670_sensor_event_cb)(inv_imu_sensor_event_t *event);
 // This defines the handler called when receiving an irq
-typedef void (*ICM42670P_irq_handler)(void);
+typedef void (*ICM42670_irq_handler)(void);
 
-class ICM42670P {
+class ICM42670 {
   public:
-    ICM42670P(TwoWire &i2c,bool address_lsb);
-    ICM42670P(TwoWire &i2c,bool lsb, uint32_t freq);
-    ICM42670P(SPIClass &spi,uint8_t chip_select_id);
-    ICM42670P(SPIClass &spi,uint8_t cs_id, uint32_t freq);
+    ICM42670(TwoWire &i2c,bool address_lsb);
+    ICM42670(TwoWire &i2c,bool lsb, uint32_t freq);
+    ICM42670(SPIClass &spi,uint8_t chip_select_id);
+    ICM42670(SPIClass &spi,uint8_t cs_id, uint32_t freq);
     int begin();
     int startAccel(uint16_t odr, uint16_t fsr);
     int startGyro(uint16_t odr, uint16_t fsr);
     int getDataFromRegisters(inv_imu_sensor_event_t& evt);
-    int enableFifoInterrupt(uint8_t intpin, ICM42670P_irq_handler handler, uint8_t fifo_watermark);
-    int getDataFromFifo(ICM42670P_sensor_event_cb event_cb);
+    int enableFifoInterrupt(uint8_t intpin, ICM42670_irq_handler handler, uint8_t fifo_watermark);
+    int getDataFromFifo(ICM42670_sensor_event_cb event_cb);
     bool isAccelDataValid(inv_imu_sensor_event_t *evt);
     bool isGyroDataValid(inv_imu_sensor_event_t *evt);
-    int startTiltDetection(uint8_t intpin=2, ICM42670P_irq_handler handler=NULL);
+    int startTiltDetection(uint8_t intpin=2, ICM42670_irq_handler handler=NULL);
     bool getTilt(void);
-    int startPedometer(uint8_t intpin=2, ICM42670P_irq_handler handler=NULL);
+    int startPedometer(uint8_t intpin=2, ICM42670_irq_handler handler=NULL);
     int getPedometer(uint32_t& step_count, float& step_cadence, const char*& activity);
-    int startWakeOnMotion(uint8_t intpin, ICM42670P_irq_handler handler);
+    int startWakeOnMotion(uint8_t intpin, ICM42670_irq_handler handler);
     int updateApex(void);
-    void enableInterrupt(uint8_t intpin, ICM42670P_irq_handler handler);
+    void enableInterrupt(uint8_t intpin, ICM42670_irq_handler handler);
 
     uint8_t i2c_address;
     TwoWire *i2c;
@@ -67,10 +67,10 @@ class ICM42670P {
     GYRO_CONFIG0_ODR_t gyro_freq_to_param(uint16_t gyro_freq_hz);
     ACCEL_CONFIG0_FS_SEL_t accel_fsr_g_to_param(uint16_t accel_fsr_g);
     GYRO_CONFIG0_FS_SEL_t gyro_fsr_dps_to_param(uint16_t gyro_fsr_dps);
-    int initApex(uint8_t intpin, ICM42670P_irq_handler handler);
+    int initApex(uint8_t intpin, ICM42670_irq_handler handler);
     uint32_t step_cnt_ovflw;
     bool apex_tilt_enable;
     bool apex_pedometer_enable;
 };
 
-#endif // ICM42670P_H
+#endif // ICM42670_H

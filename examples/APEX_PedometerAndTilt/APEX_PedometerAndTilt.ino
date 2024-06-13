@@ -17,8 +17,8 @@
 
 #include "ICM42670P.h"
 
-// Instantiate an ICM42670P with LSB address set to 0
-ICM42670P IMU(Wire,0);
+// Instantiate an ICM42670 with LSB address set to 0
+ICM42670 IMU(Wire,0);
 
 volatile uint8_t irq_received = 0;
 
@@ -31,10 +31,10 @@ void setup() {
   Serial.begin(115200);
   while(!Serial) {}
 
-  // Initializing the ICM42670P
+  // Initializing the ICM42670
   ret = IMU.begin();
   if (ret != 0) {
-    Serial.print("ICM42670P initialization failed: ");
+    Serial.print("ICM42670 initialization failed: ");
     Serial.println(ret);
     while(1);
   }
