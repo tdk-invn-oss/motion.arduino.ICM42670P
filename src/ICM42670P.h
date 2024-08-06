@@ -62,6 +62,7 @@ class ICM42670 {
     uint8_t int_status3;
   protected:
     struct inv_imu_device icm_driver;
+    inv_imu_interrupt_parameter_t int1_config;
     bool use_spi;
     ACCEL_CONFIG0_ODR_t accel_freq_to_param(uint16_t accel_freq_hz);
     GYRO_CONFIG0_ODR_t gyro_freq_to_param(uint16_t gyro_freq_hz);

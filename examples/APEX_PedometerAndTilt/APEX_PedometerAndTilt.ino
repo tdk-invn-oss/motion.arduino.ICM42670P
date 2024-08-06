@@ -48,7 +48,7 @@ void setup() {
 }
 
 void loop() {
-  // Wait for interrupt to read data Pedometer status
+  // Wait for interrupt to read data Pedometer or Tilt status
   if(irq_received) {
     uint32_t step_count=0;
     float step_cadence=0;

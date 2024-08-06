@@ -96,6 +96,7 @@ int ICM42670::begin() {
   struct inv_imu_serif icm_serif;
   int rc = 0;
   uint8_t who_am_i;
+  inv_imu_int1_pin_config_t int1_pin_config;
 
   if (i2c != NULL) {
     i2c->begin();
@@ -120,6 +121,7 @@ int ICM42670::begin() {
     return rc;
   }
   icm_driver.sensor_event_cb = event_cb;
+  int1_config = { (inv_imu_interrupt_value)0 };
   
   /* Check WHOAMI */
   rc = inv_imu_get_who_am_i(&icm_driver, &who_am_i);
@@ -130,6 +132,17 @@ int ICM42670::begin() {
     return -3;
   }
   
+  /*
+   * Configure interrupts pins
+   * - Polarity High
+   * - Pulse mode
+   * - Push-Pull drive
+  */
+  int1_pin_config.int_polarity = INT_CONFIG_INT1_POLARITY_HIGH;
+  int1_pin_config.int_mode     = INT_CONFIG_INT1_MODE_PULSED;
+  int1_pin_config.int_drive    = INT_CONFIG_INT1_DRIVE_CIRCUIT_PP;
+  inv_imu_set_pin_config_int1(&icm_driver, &int1_pin_config);
+
   /* All APEX off */
   apex_tilt_enable = false;
   apex_pedometer_enable = false;
@@ -177,9 +190,11 @@ int ICM42670::enableFifoInterrupt(uint8_t intpin, ICM42670_irq_handler handler, 
   if(handler == NULL) {
     return -1;
   }
-  pinMode(intpin,INPUT);
   enableInterrupt(intpin,handler);
   rc |= inv_imu_configure_fifo(&icm_driver,INV_IMU_FIFO_ENABLED);
+  // Configure interrupts sources
+  int1_config.INV_FIFO_THS = INV_IMU_ENABLE;
+  rc |= inv_imu_set_config_int1(&icm_driver, &int1_config);
   rc |= inv_imu_write_reg(&icm_driver, FIFO_CONFIG2, 1, &fifo_watermark);
   // Set fifo_wm_int_w generating condition : fifo_wm_int_w generated when counter == threshold
   rc |= inv_imu_read_reg(&icm_driver, FIFO_CONFIG5_MREG1, 1, &data);
@@ -211,19 +226,9 @@ int ICM42670::initApex(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int                       rc = 0;
   inv_imu_apex_parameters_t apex_inputs;
-  inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
 
   /* Disabling FIFO usage to optimize power consumption */
   rc |= inv_imu_configure_fifo(&icm_driver, INV_IMU_FIFO_DISABLED);
-
-  /* Disable FIFO threshold, DRDY and WOM interrupts on INT1 */
-  rc |= inv_imu_get_config_int1(&icm_driver, &config_int);
-  config_int.INV_FIFO_THS = INV_IMU_DISABLE;
-  config_int.INV_UI_DRDY  = INV_IMU_DISABLE;
-  config_int.INV_WOM_X    = INV_IMU_DISABLE;
-  config_int.INV_WOM_Y    = INV_IMU_DISABLE;
-  config_int.INV_WOM_Z    = INV_IMU_DISABLE;
-  rc |= inv_imu_set_config_int1(&icm_driver, &config_int);
 
   /* Enable accel in LP mode */
   rc |= inv_imu_enable_accel_low_power_mode(&icm_driver);
@@ -240,6 +245,7 @@ int ICM42670::initApex(uint8_t intpin, ICM42670_irq_handler handler)
   apex_inputs.power_save =APEX_CONFIG0_DMP_POWER_SAVE_DIS;
   rc |= inv_imu_apex_configure_parameters(&icm_driver, &apex_inputs);
 
+  rc |= inv_imu_set_config_int1(&icm_driver, &int1_config);
   enableInterrupt(intpin,handler);
 
   if(apex_tilt_enable)
@@ -267,6 +273,8 @@ int ICM42670::startTiltDetection(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int rc = 0;
   apex_tilt_enable = true;
+  /* Configure interrupts sources */
+  int1_config.INV_TILT_DET = INV_IMU_ENABLE;
   rc |= initApex(intpin,handler);
   return rc;
 }
@@ -288,6 +296,9 @@ int ICM42670::startPedometer(uint8_t intpin, ICM42670_irq_handler handler)
   int rc = 0;
   step_cnt_ovflw = 0;
   apex_pedometer_enable = true;
+  /* Configure interrupts sources */
+  int1_config.INV_STEP_DET      = INV_IMU_ENABLE;
+  int1_config.INV_STEP_CNT_OVFL = INV_IMU_ENABLE;
   rc |= initApex(intpin,handler);
   return rc;
 }
@@ -337,16 +348,15 @@ int ICM42670::startWakeOnMotion(uint8_t intpin, ICM42670_irq_handler handler)
 {
   int rc = 0;
   inv_imu_apex_parameters_t apex_inputs;
-  inv_imu_interrupt_parameter_t config_int = { (inv_imu_interrupt_value)0 };
+
+  /* Configure interrupts sources */
+  int1_config.INV_WOM_X = INV_IMU_ENABLE;
+  int1_config.INV_WOM_Y = INV_IMU_ENABLE;
+  int1_config.INV_WOM_Z = INV_IMU_ENABLE;
+  rc |= inv_imu_set_config_int1(&icm_driver, &int1_config);
 
   /* Disabling FIFO usage to optimize power consumption */
   rc |= inv_imu_configure_fifo(&icm_driver, INV_IMU_FIFO_DISABLED);
-
-  /* Disable FIFO threshold, DRDY and WOM interrupts on INT1 */
-  rc |= inv_imu_get_config_int1(&icm_driver, &config_int);
-  config_int.INV_FIFO_THS = INV_IMU_DISABLE;
-  config_int.INV_UI_DRDY  = INV_IMU_DISABLE;
-  rc |= inv_imu_set_config_int1(&icm_driver, &config_int);
 
   /* Disable Pedometer before configuring it */
   rc |= inv_imu_apex_disable_pedometer(&icm_driver);
@@ -355,8 +365,7 @@ int ICM42670::startWakeOnMotion(uint8_t intpin, ICM42670_irq_handler handler)
   apex_tilt_enable = false;
   apex_pedometer_enable = false;
 
-  pinMode(intpin,INPUT);
-  attachInterrupt(intpin,handler,RISING);
+  enableInterrupt(intpin,handler);
 
   /* 
    * Optimize power consumption:
@@ -514,4 +523,3 @@ GYRO_CONFIG0_ODR_t ICM42670::gyro_freq_to_param(uint16_t gyro_freq_hz) {
 static void event_cb(inv_imu_sensor_event_t *evt) {
   memcpy(event,evt,sizeof(inv_imu_sensor_event_t));
 }
-
