@@ -1,0 +1,32 @@
+name: Comment on New Issue to Notify Code Owners
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Get CODEOWNERS
+      id: get-codeowners
+      run: |
+        sed -ne "s/^\* \(.*\)/CODEOWNERS=\1/p;" CODEOWNERS > "$GITHUB_OUTPUT"
+
+    - name: Comment on the new issue
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.BOT_ACCOUNT_PAT }}
+        script: |
+          const issueNumber = context.issue.number;
+          const commentBody = "Thank you for opening this issue! We will look into it shortly.<br><br>Notifying ${{ steps.get-codeowners.outputs.CODEOWNERS }}";
+          
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            body: commentBody
+          });
