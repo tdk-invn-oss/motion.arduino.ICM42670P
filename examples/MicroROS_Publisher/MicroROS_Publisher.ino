@@ -23,18 +23,6 @@
   It publishes IMU accelerometer and gyroscope data from ICM42670 to microROS
   Agent.
   
-  To get the data at 100Hz, please modify the serial interface speed in 
-  micro_ros_arduino library: src\default_transport.cpp
-  
-  Update the baudrate parameter in `c Serial.begin()` API. 
-  For example to 1Mbaud/s.
-  ```c
-    bool arduino_transport_open(struct uxrCustomTransport * transport)
-    {
-      Serial.begin(1000000);
-      return true;
-    }
-  ```
 */
 #include <micro_ros_arduino.h>
 
@@ -46,6 +34,8 @@
 #include <rclc/executor.h>
 
 #include <sensor_msgs/msg/imu.h>
+#include <micro_ros_utilities/type_utilities.h>
+#include <micro_ros_utilities/string_utilities.h>
 
 rcl_publisher_t publisher;
 sensor_msgs__msg__Imu imu_msg;
@@ -73,11 +63,29 @@ void irq_handler(void) {
 }
 
 float_t convert_accel(int16_t raw, uint16_t fs) {
- return (float)raw * fs / INT16_MAX;
+ return (float)raw * fs * 9.80665/ INT16_MAX;
 }
 
 float_t convert_gyro(int16_t raw, uint16_t fs) {
  return ((float)raw * fs * PI) / (INT16_MAX * 180);
+}
+// Create our own transport function to change default serial speed from 115200 to 1000000
+bool arduino_mytransport_open(struct uxrCustomTransport * transport)
+{
+  Serial.begin(1000000);
+  return true;
+}
+
+
+static inline void set_microros_mytransports(){
+	rmw_uros_set_custom_transport(
+		true,
+		NULL,
+		arduino_mytransport_open,
+		arduino_transport_close,
+		arduino_transport_write,
+		arduino_transport_read
+	);
 }
 
 void event_cb(inv_imu_sensor_event_t *evt) {
@@ -102,7 +110,7 @@ void event_cb(inv_imu_sensor_event_t *evt) {
 }
 
 void setup() {
-  set_microros_transports();
+  set_microros_mytransports();
   delay(2000);
 
   // Initializing the ICM42670
@@ -134,6 +142,9 @@ void setup() {
 
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  
+  // Configure Reference Frame Identifier
+  imu_msg.header.frame_id = micro_ros_string_utilities_set(imu_msg.header.frame_id, "/imu_link0");
 }
 
 void loop() {
